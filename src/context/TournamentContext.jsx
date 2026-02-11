@@ -205,11 +205,13 @@ export function TournamentProvider({ children }) {
         updateMatchScore: (matchId, scoreA, scoreB) => {
             setData(prev => ({
                 ...prev,
-                matches: prev.matches.map(m =>
-                    m.id === matchId
-                        ? { ...m, scoreA, scoreB, completed: true }
-                        : m
-                ),
+                matches: prev.matches.map(m => {
+                    if (m.id === matchId) {
+                        const winnerId = scoreA > scoreB ? m.teamAId : m.teamBId;
+                        return { ...m, scoreA, scoreB, completed: true, winnerId };
+                    }
+                    return m;
+                }),
             }));
         }
     };

@@ -14,7 +14,7 @@ export function Home() {
   // Check for tournament winner
   const finalMatch = data.matches.find((m) => m.stage === STAGES.FINAL);
   const winner = finalMatch?.completed ? data.teams.find((t) => t.id === finalMatch.winnerId) : null;
-  const showWinnerSlot = finalMatch !== undefined; // Show slot if final match exists
+  const showWinnerSlot = true; // Always show winner slot
 
   return (
     <div className="min-h-[calc(100vh-64px)] flex flex-col justify-center relative -mt-0">

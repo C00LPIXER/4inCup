@@ -22,6 +22,9 @@ export function Fixtures() {
     
     const allGroupMatchesCompleted = groupMatches.length > 0 && groupMatches.every(m => m.completed);
     const canGenerateSemis = allGroupMatchesCompleted && semiMatches.length === 0 && top4Teams.length >= 4;
+    
+    const allSemisCompleted = semiMatches.length === 2 && semiMatches.every(m => m.completed);
+    const canGenerateFinal = allSemisCompleted && !finalMatch;
 
     return (
         <div className="space-y-8">
@@ -34,6 +37,17 @@ export function Fixtures() {
                         className="bg-lime-500 hover:bg-lime-400 text-black font-bold py-3 px-6 rounded-lg flex items-center gap-2 transition-colors"
                     >
                         <ArrowRight className="w-5 h-5" /> Generate Semi Finals
+                    </button>
+                </div>
+            )}
+            
+            {canGenerateFinal && (
+                <div className="flex justify-center">
+                    <button
+                        onClick={actions.generateNextStage}
+                        className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 px-6 rounded-lg flex items-center gap-2 transition-colors"
+                    >
+                        <Trophy className="w-5 h-5" /> Generate Final
                     </button>
                 </div>
             )}
