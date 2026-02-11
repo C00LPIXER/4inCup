@@ -1,9 +1,12 @@
+import { useState, useEffect, useRef } from 'react';
 import { useTournament } from '../context/TournamentContext';
+import { useAuth } from '../context/AuthContext';
 import { STAGES, calculateStandings, getSortedStandings } from '../utils/logic';
 import { CheckCircle, Clock, Trophy, ArrowRight } from 'lucide-react';
 
 export function Fixtures() {
     const { data, actions } = useTournament();
+    const { isAuthenticated } = useAuth();
     
     const groupMatches = data.matches.filter(m => m.stage === STAGES.GROUP).sort((a, b) => {
         if (a.completed !== b.completed) return b.completed ? 1 : -1;
@@ -48,7 +51,7 @@ export function Fixtures() {
                             groupMatches.map(match => {
                                 const teamA = data.teams.find(t => t.id === match.teamAId);
                                 const teamB = data.teams.find(t => t.id === match.teamBId);
-                                return <MatchCard key={match.id} match={match} teamA={teamA} teamB={teamB} />;
+                                return <MatchCard key={match.id} match={match} teamA={teamA} teamB={teamB} isAuthenticated={isAuthenticated} />;
                             })
                         )}
                     </div>
@@ -75,17 +78,41 @@ export function Fixtures() {
                         Semi Finals
                     </h2>
                     <div className="space-y-3">
-                        {semiMatches.length === 0 ? (
-                            <div className="text-center py-8 text-neutral-500 italic">
-                                {allGroupMatchesCompleted ? 'Ready to generate' : 'Complete group stage first'}
-                            </div>
-                        ) : (
-                            semiMatches.map(match => {
-                                const teamA = data.teams.find(t => t.id === match.teamAId);
-                                const teamB = data.teams.find(t => t.id === match.teamBId);
-                                return <MatchCard key={match.id} match={match} teamA={teamA} teamB={teamB} />;
-                            })
-                        )}
+                        {(() => {
+                            // Always show 4 semi-final slots
+                            const semiCards = [];
+                            for (let i = 0; i < 4; i++) {
+                                const match = semiMatches[i];
+                                if (match) {
+                                    const teamA = data.teams.find(t => t.id === match.teamAId);
+                                    const teamB = data.teams.find(t => t.id === match.teamBId);
+                                    semiCards.push(
+                                        <MatchCard key={match.id} match={match} teamA={teamA} teamB={teamB} isAuthenticated={isAuthenticated} />
+                                    );
+                                } else {
+                                    semiCards.push(
+                                        <div key={i} className="bg-neutral-900/50 border-white/5 border rounded-lg p-3 flex flex-col gap-2 relative overflow-hidden transition-all duration-300 min-h-[72px] opacity-50">
+                                            <div className="flex justify-between text-xs text-neutral-500 font-medium uppercase tracking-wider">
+                                                <span>Match #SF{i+1}</span>
+                                                <span className="text-orange-400 flex items-center gap-1"><Clock className="w-3 h-3" /> Scheduled</span>
+                                            </div>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="flex-1 text-right">
+                                                    <div className="font-bold text-sm text-white">&nbsp;</div>
+                                                </div>
+                                                <div className="px-3 py-1 bg-black/40 rounded text-lg font-mono font-bold text-white tracking-wide min-w-[60px] text-center border border-white/10">
+                                                    vs
+                                                </div>
+                                                <div className="flex-1 text-left">
+                                                    <div className="font-bold text-sm text-white">&nbsp;</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                }
+                            }
+                            return semiCards;
+                        })()}
                     </div>
                 </div>
 
@@ -95,19 +122,45 @@ export function Fixtures() {
                         <Trophy className="w-6 h-6" /> Final
                     </h2>
                     <div className="space-y-3">
-                        {!finalMatch ? (
-                            <div className="text-center py-8 text-neutral-500 italic">
-                                {semiMatches.every(m => m.completed) && semiMatches.length === 2 ? 'Ready to generate' : 'Complete semi finals first'}
-                            </div>
-                        ) : (
-                            <MatchCard 
-                                match={finalMatch} 
-                                teamA={data.teams.find(t => t.id === finalMatch.teamAId)} 
-                                teamB={data.teams.find(t => t.id === finalMatch.teamBId)} 
-                            />
-                        )}
+                        {(() => {
+                            // Always show 2 final slots
+                            const finalCards = [];
+                            for (let i = 0; i < 2; i++) {
+                                if (finalMatch && i === 0) {
+                                    finalCards.push(
+                                        <MatchCard 
+                                            key={finalMatch.id} 
+                                            match={finalMatch} 
+                                            teamA={data.teams.find(t => t.id === finalMatch.teamAId)} 
+                                            teamB={data.teams.find(t => t.id === finalMatch.teamBId)}
+                                            isAuthenticated={isAuthenticated} 
+                                        />
+                                    );
+                                } else {
+                                    finalCards.push(
+                                        <div key={i} className="bg-neutral-900/50 border-white/5 border rounded-lg p-3 flex flex-col gap-2 relative overflow-hidden transition-all duration-300 min-h-[72px] opacity-50">
+                                            <div className="flex justify-between text-xs text-neutral-500 font-medium uppercase tracking-wider">
+                                                <span>Match #FINAL{i+1}</span>
+                                                <span className="text-yellow-400 flex items-center gap-1"><Clock className="w-3 h-3" /> Scheduled</span>
+                                            </div>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="flex-1 text-right">
+                                                    <div className="font-bold text-sm text-white">&nbsp;</div>
+                                                </div>
+                                                <div className="px-3 py-1 bg-black/40 rounded text-lg font-mono font-bold text-white tracking-wide min-w-[60px] text-center border border-white/10">
+                                                    vs
+                                                </div>
+                                                <div className="flex-1 text-left">
+                                                    <div className="font-bold text-sm text-white">&nbsp;</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                }
+                            }
+                            return finalCards;
+                        })()}
                     </div>
-                    
                     {finalMatch?.completed && (
                         <div className="mt-6 p-6 bg-yellow-900/20 border-2 border-yellow-500/50 rounded-lg text-center">
                             <Trophy className="w-12 h-12 mx-auto mb-3 text-yellow-400" />
@@ -123,11 +176,61 @@ export function Fixtures() {
     );
 }
 
-function MatchCard({ match, teamA, teamB }) {
+function MatchCard({ match, teamA, teamB, isAuthenticated }) {
+    const { actions } = useTournament();
     const isCompleted = match.completed;
     const cardStyle = isCompleted
         ? "bg-lime-900/20 border-lime-500/50"
         : "bg-neutral-900/50 border-white/5";
+
+    // Local state for editing
+    const [editing, setEditing] = useState(false);
+    const [scoreA, setScoreA] = useState(match.scoreA);
+    const [scoreB, setScoreB] = useState(match.scoreB);
+    const inputContainerRef = useRef(null);
+
+    // Sync local state with match props when not editing
+    useEffect(() => {
+        if (!editing) {
+            setScoreA(match.scoreA);
+            setScoreB(match.scoreB);
+        }
+    }, [match.scoreA, match.scoreB, editing]);
+
+    // Auto-save on score change with debounce
+    useEffect(() => {
+        if (!editing) return;
+        
+        const timeoutId = setTimeout(() => {
+            if (scoreA !== match.scoreA || scoreB !== match.scoreB) {
+                actions.updateMatchScore(match.id, scoreA, scoreB);
+            }
+        }, 800);
+        
+        return () => clearTimeout(timeoutId);
+    }, [scoreA, scoreB, editing, match.scoreA, match.scoreB, match.id, actions]);
+
+    // Close editing when clicking outside
+    useEffect(() => {
+        if (!editing) return;
+        
+        const handleClickOutside = (e) => {
+            // Only close if clicking outside the input container
+            if (inputContainerRef.current && !inputContainerRef.current.contains(e.target)) {
+                setEditing(false);
+            }
+        };
+        
+        // Small delay to prevent immediate closing when opening
+        const timer = setTimeout(() => {
+            document.addEventListener('mousedown', handleClickOutside);
+        }, 0);
+        
+        return () => {
+            clearTimeout(timer);
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [editing]);
 
     return (
         <div className={`${cardStyle} backdrop-blur border rounded-lg p-3 flex flex-col gap-2 relative overflow-hidden transition-all duration-300`}>
@@ -147,9 +250,37 @@ function MatchCard({ match, teamA, teamB }) {
                     </div>
                 </div>
 
-                <div className="px-3 py-1 bg-black/40 rounded text-lg font-mono font-bold text-white tracking-wide min-w-[60px] text-center border border-white/10">
-                    {isCompleted ? `${match.scoreA}-${match.scoreB}` : 'vs'}
-                </div>
+                {editing ? (
+                    <div 
+                        ref={inputContainerRef}
+                        className="flex items-center gap-3"
+                    >
+                        <input
+                            type="number"
+                            value={scoreA}
+                            onChange={e => setScoreA(Number(e.target.value))}
+                            autoFocus
+                            className="w-24 h-16 text-4xl text-center font-bold rounded bg-black/60 border-2 border-lime-400 text-lime-400 focus:outline-none focus:ring-2 focus:ring-lime-500"
+                        />
+                        <span className="text-3xl font-bold text-white">-</span>
+                        <input
+                            type="number"
+                            value={scoreB}
+                            onChange={e => setScoreB(Number(e.target.value))}
+                            className="w-24 h-16 text-4xl text-center font-bold rounded bg-black/60 border-2 border-lime-400 text-lime-400 focus:outline-none focus:ring-2 focus:ring-lime-500"
+                        />
+                    </div>
+                ) : (
+                    <div
+                        className={`px-3 py-1 bg-black/40 rounded text-lg font-mono font-bold text-white tracking-wide min-w-[60px] text-center border border-white/10 ${isAuthenticated ? 'cursor-pointer hover:bg-black/60' : 'cursor-default'}`}
+                        onClick={(e) => {
+                            if (isAuthenticated) setEditing(true);
+                        }}
+                        title={isAuthenticated ? "Click to edit score" : "Login to edit scores"}
+                    >
+                        {isCompleted ? `${match.scoreA}-${match.scoreB}` : 'vs'}
+                    </div>
+                )}
 
                 <div className="flex-1 text-left">
                     <div className={`font-bold text-sm ${match.winnerId === teamB?.id ? 'text-lime-400' : 'text-white'}`}>

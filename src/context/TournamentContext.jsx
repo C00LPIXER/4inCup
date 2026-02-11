@@ -201,6 +201,16 @@ export function TournamentProvider({ children }) {
             }
 
             setData(prev => ({ ...prev, matches: newMatches, stage: nextStage }));
+        },
+        updateMatchScore: (matchId, scoreA, scoreB) => {
+            setData(prev => ({
+                ...prev,
+                matches: prev.matches.map(m =>
+                    m.id === matchId
+                        ? { ...m, scoreA, scoreB, completed: true }
+                        : m
+                ),
+            }));
         }
     };
 
