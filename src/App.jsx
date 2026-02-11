@@ -5,8 +5,7 @@ import { Home } from './pages/Home'
 import { Groups } from './pages/Groups'
 import { Fixtures } from './pages/Fixtures'
 import { Standings } from './pages/Standings'
-import { Bracket } from './pages/Bracket'
-import { Admin } from './pages/Admin'
+import { Settings } from './pages/Settings'
 
 function App() {
   return (
@@ -18,8 +17,7 @@ function App() {
             <Route path="/groups" element={<Groups />} />
             <Route path="/fixtures" element={<Fixtures />} />
             <Route path="/standings" element={<Standings />} />
-            <Route path="/bracket" element={<Bracket />} />
-            <Route path="/admin" element={<Admin />} />
+            <Route path="/settings" element={<Settings />} />
           </Routes>
         </Layout>
       </BrowserRouter>

@@ -1,59 +1,123 @@
-import { useState } from 'react';
 import { useTournament } from '../context/TournamentContext';
-import { STAGES } from '../utils/logic';
-import { Calendar, CheckCircle, Clock } from 'lucide-react';
+import { STAGES, calculateStandings, getSortedStandings } from '../utils/logic';
+import { CheckCircle, Clock, Trophy, ArrowRight } from 'lucide-react';
 
 export function Fixtures() {
-    const { data } = useTournament();
-    const [filter, setFilter] = useState('ALL'); // ALL, GROUP, KNOCKOUT
-    const [statusFilter, setStatusFilter] = useState('ALL'); // ALL, PLAYED, UPCOMING
-
-    const filteredMatches = data.matches.filter(m => {
-        const stageMatch = filter === 'ALL'
-            ? true
-            : filter === 'GROUP'
-                ? m.stage === STAGES.GROUP
-                : m.stage !== STAGES.GROUP;
-
-        const statusMatch = statusFilter === 'ALL'
-            ? true
-            : statusFilter === 'PLAYED'
-                ? m.completed
-                : !m.completed;
-
-        return stageMatch && statusMatch;
+    const { data, actions } = useTournament();
+    
+    const groupMatches = data.matches.filter(m => m.stage === STAGES.GROUP).sort((a, b) => {
+        if (a.completed !== b.completed) return b.completed ? 1 : -1;
+        return a.matchNumber - b.matchNumber;
     });
+    
+    const semiMatches = data.matches.filter(m => m.stage === STAGES.SEMI_FINAL);
+    const finalMatch = data.matches.find(m => m.stage === STAGES.FINAL);
+    
+    const standings = calculateStandings(data.teams, data.matches);
+    const sortedStandings = getSortedStandings(standings);
+    const top4Teams = sortedStandings.slice(0, 4);
+    
+    const allGroupMatchesCompleted = groupMatches.length > 0 && groupMatches.every(m => m.completed);
+    const canGenerateSemis = allGroupMatchesCompleted && semiMatches.length === 0 && top4Teams.length >= 4;
 
     return (
         <div className="space-y-8">
-            <div className="flex flex-col gap-4">
-                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                    <h1 className="text-4xl font-bold">Fixtures & Results</h1>
+            <h1 className="text-4xl font-bold text-center">Tournament Bracket</h1>
+            
+            {canGenerateSemis && (
+                <div className="flex justify-center">
+                    <button
+                        onClick={actions.generateNextStage}
+                        className="bg-lime-500 hover:bg-lime-400 text-black font-bold py-3 px-6 rounded-lg flex items-center gap-2 transition-colors"
+                    >
+                        <ArrowRight className="w-5 h-5" /> Generate Semi Finals
+                    </button>
+                </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Group Stage Column */}
+                <div className="space-y-4">
+                    <h2 className="text-2xl font-bold text-lime-400 text-center border-b border-lime-500/30 pb-2">
+                        Group Stage
+                    </h2>
+                    <div className="space-y-3">
+                        {groupMatches.length === 0 ? (
+                            <div className="text-center py-8 text-neutral-500 italic">No matches yet</div>
+                        ) : (
+                            groupMatches.map(match => {
+                                const teamA = data.teams.find(t => t.id === match.teamAId);
+                                const teamB = data.teams.find(t => t.id === match.teamBId);
+                                return <MatchCard key={match.id} match={match} teamA={teamA} teamB={teamB} />;
+                            })
+                        )}
+                    </div>
+                    
+                    {allGroupMatchesCompleted && top4Teams.length >= 4 && (
+                        <div className="mt-6 p-4 bg-lime-900/20 border border-lime-500/30 rounded-lg">
+                            <h3 className="font-bold text-lime-400 mb-2 text-center">Top 4 Teams Qualify</h3>
+                            <div className="space-y-1 text-sm">
+                                {top4Teams.map((team, i) => (
+                                    <div key={team.id} className="flex items-center justify-between text-white">
+                                        <span className="font-mono">#{i + 1}</span>
+                                        <span>{team.player1} & {team.player2}</span>
+                                        <span className="text-lime-400 font-bold">{team.points} pts</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
-                <div className="flex flex-col gap-2 bg-neutral-900 p-2 rounded-lg border border-white/10">
-                    {/* Stage Filters */}
-                    <div className="flex justify-center flex-wrap gap-2">
-                        <FilterButton active={filter === 'GROUP'} onClick={() => setFilter('GROUP')} label="Group Stage" />
-                        <FilterButton active={filter === 'KNOCKOUT'} onClick={() => setFilter('KNOCKOUT')} label="Knockout" />
+                {/* Semi Final Column */}
+                <div className="space-y-4">
+                    <h2 className="text-2xl font-bold text-orange-400 text-center border-b border-orange-500/30 pb-2">
+                        Semi Finals
+                    </h2>
+                    <div className="space-y-3">
+                        {semiMatches.length === 0 ? (
+                            <div className="text-center py-8 text-neutral-500 italic">
+                                {allGroupMatchesCompleted ? 'Ready to generate' : 'Complete group stage first'}
+                            </div>
+                        ) : (
+                            semiMatches.map(match => {
+                                const teamA = data.teams.find(t => t.id === match.teamAId);
+                                const teamB = data.teams.find(t => t.id === match.teamBId);
+                                return <MatchCard key={match.id} match={match} teamA={teamA} teamB={teamB} />;
+                            })
+                        )}
                     </div>
                 </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {filteredMatches.length === 0 ? (
-                    <div className="col-span-full text-center py-12 text-neutral-500 italic">
-                        No matches found.
+                {/* Final Column */}
+                <div className="space-y-4">
+                    <h2 className="text-2xl font-bold text-yellow-400 text-center border-b border-yellow-500/30 pb-2 flex items-center justify-center gap-2">
+                        <Trophy className="w-6 h-6" /> Final
+                    </h2>
+                    <div className="space-y-3">
+                        {!finalMatch ? (
+                            <div className="text-center py-8 text-neutral-500 italic">
+                                {semiMatches.every(m => m.completed) && semiMatches.length === 2 ? 'Ready to generate' : 'Complete semi finals first'}
+                            </div>
+                        ) : (
+                            <MatchCard 
+                                match={finalMatch} 
+                                teamA={data.teams.find(t => t.id === finalMatch.teamAId)} 
+                                teamB={data.teams.find(t => t.id === finalMatch.teamBId)} 
+                            />
+                        )}
                     </div>
-                ) : (
-                    filteredMatches.map(match => {
-                        const teamA = data.teams.find(t => t.id === match.teamAId) || { name: 'TBD' };
-                        const teamB = data.teams.find(t => t.id === match.teamBId) || { name: 'TBD' };
-                        return (
-                            <MatchCard key={match.id} match={match} teamA={teamA} teamB={teamB} />
-                        );
-                    })
-                )}
+                    
+                    {finalMatch?.completed && (
+                        <div className="mt-6 p-6 bg-yellow-900/20 border-2 border-yellow-500/50 rounded-lg text-center">
+                            <Trophy className="w-12 h-12 mx-auto mb-3 text-yellow-400" />
+                            <h3 className="font-bold text-2xl text-yellow-400 mb-2">Champions!</h3>
+                            <div className="text-xl text-white font-bold">
+                                {data.teams.find(t => t.id === finalMatch.winnerId)?.player1} & {data.teams.find(t => t.id === finalMatch.winnerId)?.player2}
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -61,17 +125,14 @@ export function Fixtures() {
 
 function MatchCard({ match, teamA, teamB }) {
     const isCompleted = match.completed;
-    const isLive = !isCompleted && match.scoreA > 0; // Simple heuristic
-
     const cardStyle = isCompleted
-        ? "bg-lime-900/20 border-lime-500/50 hover:border-lime-500"
-        : "bg-neutral-900/50 border-white/5 hover:border-lime-500/30";
+        ? "bg-lime-900/20 border-lime-500/50"
+        : "bg-neutral-900/50 border-white/5";
 
     return (
-        <div className={`${cardStyle} backdrop-blur border rounded-xl p-4 flex flex-col gap-3 relative overflow-hidden group transition-all duration-300`}>
-            {/* Status Indicator */}
+        <div className={`${cardStyle} backdrop-blur border rounded-lg p-3 flex flex-col gap-2 relative overflow-hidden transition-all duration-300`}>
             <div className="flex justify-between text-xs text-neutral-500 font-medium uppercase tracking-wider">
-                <span>{match.stage} • {match.group ? `Group ${match.group}` : match.matchNumber}</span>
+                <span>Match #{match.matchNumber}</span>
                 {isCompleted ? (
                     <span className="text-lime-400 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> FT</span>
                 ) : (
@@ -79,38 +140,23 @@ function MatchCard({ match, teamA, teamB }) {
                 )}
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
                 <div className="flex-1 text-right">
-                    <div className={`font-bold text-lg ${match.winnerId === teamA.id ? 'text-lime-400' : 'text-white'}`}>
-                        {teamA.id ? `${teamA.player1} & ${teamA.player2}` : 'TBD'}
+                    <div className={`font-bold text-sm ${match.winnerId === teamA?.id ? 'text-lime-400' : 'text-white'}`}>
+                        {teamA ? `${teamA.player1} & ${teamA.player2}` : 'TBD'}
                     </div>
                 </div>
 
-                <div className="px-4 py-1 bg-black/40 rounded-lg text-xl font-mono font-bold text-white mx-3 tracking-widest min-w-[80px] text-center border border-white/10">
-                    {isCompleted || isLive ? `${match.scoreA} - ${match.scoreB}` : 'vs'}
+                <div className="px-3 py-1 bg-black/40 rounded text-lg font-mono font-bold text-white tracking-wide min-w-[60px] text-center border border-white/10">
+                    {isCompleted ? `${match.scoreA}-${match.scoreB}` : 'vs'}
                 </div>
 
                 <div className="flex-1 text-left">
-                    <div className={`font-bold text-lg ${match.winnerId === teamB.id ? 'text-lime-400' : 'text-white'}`}>
-                        {teamB.id ? `${teamB.player1} & ${teamB.player2}` : 'TBD'}
+                    <div className={`font-bold text-sm ${match.winnerId === teamB?.id ? 'text-lime-400' : 'text-white'}`}>
+                        {teamB ? `${teamB.player1} & ${teamB.player2}` : 'TBD'}
                     </div>
                 </div>
             </div>
-
-            {/* Decoration */}
-            <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-lime-500/10 to-transparent rounded-bl-full pointer-events-none" />
         </div>
-    )
-}
-
-function FilterButton({ active, onClick, label }) {
-    return (
-        <button
-            onClick={onClick}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors
-        ${active ? 'bg-lime-500 text-neutral-950' : 'text-neutral-400 hover:text-white'}`}
-        >
-            {label}
-        </button>
-    )
+    );
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTournament } from '../context/TournamentContext';
-import { GROUPS, STAGES } from '../utils/logic';
+import { STAGES } from '../utils/logic';
 import { Plus, Save, Play, RefreshCw, Trash2, ArrowRight } from 'lucide-react';
 
 export function Admin() {
@@ -41,38 +41,34 @@ function TabButton({ active, onClick, label }) {
 }
 
 function TeamsPanel({ data, actions }) {
-    const [form, setForm] = useState({ name: '', p1: '', p2: '', group: 'A' });
+    const [form, setForm] = useState({ p1: '', p2: '' });
     const [editingId, setEditingId] = useState(null);
 
     const handleSubmit = (e) => {
         e.preventDefault();
         if (editingId) {
             actions.updateTeam(editingId, {
-                name: form.name,
                 player1: form.p1,
-                player2: form.p2,
-                group: form.group
+                player2: form.p2
             });
             setEditingId(null);
         } else {
-            actions.addTeam(form.name, form.p1, form.p2, form.group);
+            actions.addTeam(form.p1, form.p2);
         }
-        setForm({ name: '', p1: '', p2: '', group: 'A' });
+        setForm({ p1: '', p2: '' });
     };
 
     const handleEdit = (team) => {
         setForm({
-            name: team.name,
             p1: team.player1,
-            p2: team.player2,
-            group: team.group
+            p2: team.player2
         });
         setEditingId(team.id);
     };
 
     const handleCancel = () => {
         setEditingId(null);
-        setForm({ name: '', p1: '', p2: '', group: 'A' });
+        setForm({ p1: '', p2: '' });
     };
 
     return (
@@ -83,17 +79,6 @@ function TeamsPanel({ data, actions }) {
                     {editingId ? 'Edit Team' : 'Add New Team'}
                 </h3>
                 <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="col-span-2">
-                        <label className="block text-xs uppercase tracking-wider text-neutral-500 mb-1">Team Name</label>
-                        <input
-                            required
-                            type="text"
-                            value={form.name}
-                            onChange={e => setForm({ ...form, name: e.target.value })}
-                            className="w-full bg-black/50 border border-white/10 rounded-md px-3 py-2 text-white focus:border-lime-500 outline-none"
-                            placeholder="e.g. Thunder Smashers"
-                        />
-                    </div>
                     <div>
                         <label className="block text-xs uppercase tracking-wider text-neutral-500 mb-1">Player 1</label>
                         <input
@@ -115,17 +100,6 @@ function TeamsPanel({ data, actions }) {
                             className="w-full bg-black/50 border border-white/10 rounded-md px-3 py-2 text-white focus:border-lime-500 outline-none"
                             placeholder="Name"
                         />
-                    </div>
-                    <div>
-                        <label className="block text-xs uppercase tracking-wider text-neutral-500 mb-1">Group</label>
-                        <select
-                            value={form.group}
-                            onChange={e => setForm({ ...form, group: e.target.value })}
-                            className="w-full bg-black/50 border border-white/10 rounded-md px-3 py-2 text-white focus:border-lime-500 outline-none"
-                        >
-                            <option value="A">Group A</option>
-                            <option value="B">Group B</option>
-                        </select>
                     </div>
                     <div className="flex items-end gap-2 text-right justify-end md:col-span-2">
                         {editingId && (
@@ -155,13 +129,9 @@ function TeamsPanel({ data, actions }) {
                         <div key={team.id} className={`bg-white/5 p-4 rounded-lg flex justify-between items-center group
                             ${editingId === team.id ? 'border border-yellow-500/50 bg-yellow-500/10' : ''}`}>
                             <div>
-                                <div className="font-bold">{team.name}</div>
-                                <div className="text-xs text-neutral-400">{team.player1} & {team.player2}</div>
+                                <div className="font-bold">{team.player1} & {team.player2}</div>
                             </div>
                             <div className="flex items-center gap-3">
-                                <span className={`px-2 py-0.5 text-xs font-bold rounded ${team.group === 'A' ? 'bg-lime-500/20 text-lime-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-                                    Group {team.group}
-                                </span>
                                 <button onClick={() => handleEdit(team)} className="text-neutral-400 hover:text-yellow-400 transition-colors" title="Edit">
                                     <RefreshCw className="w-4 h-4" />
                                 </button>
@@ -225,7 +195,7 @@ function ScoreEditor({ match, teams, onUpdate, onUpdateTeams, onReset }) {
         <div className="bg-white/5 p-4 rounded-lg flex flex-col md:flex-row items-center gap-4 justify-between border border-white/5">
             <div className="flex-1 w-full flex justify-between md:justify-start items-center gap-4">
                 <div className="text-xs font-mono text-neutral-500 w-16 text-center shrink-0" onClick={() => setIsEditingTeams(!isEditingTeams)} title="Click to edit teams">
-                    {match.group ? `GRP ${match.group}` : match.matchNumber}
+                    {match.matchNumber}
                 </div>
 
                 {isEditingTeams ? (

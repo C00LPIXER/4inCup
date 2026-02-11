@@ -1,32 +1,26 @@
 import { useTournament } from '../context/TournamentContext';
-import { GROUPS, calculateStandings, getSortedStandings } from '../utils/logic';
+import { calculateStandings, getSortedStandings } from '../utils/logic';
 
 export function Standings() {
     const { data } = useTournament();
     const standings = calculateStandings(data.teams, data.matches);
-    const groupA = getSortedStandings(standings, GROUPS.A);
-    const groupB = getSortedStandings(standings, GROUPS.B);
+    const sortedStandings = getSortedStandings(standings);
 
     return (
         <div className="space-y-12">
             <h1 className="text-4xl font-bold text-center mb-8">Points Table</h1>
             <div className="flex justify-center w-full">
-                <PointsTable title="Group A" data={groupA} color="lime" />
-                {/* <PointsTable title="Group B" data={groupB} color="emerald" /> */}
+                <PointsTable data={sortedStandings} />
             </div>
         </div>
     );
 }
 
-function PointsTable({ title, data, color }) {
-    const isA = color === 'lime';
-    const headerColor = isA ? 'text-lime-400' : 'text-emerald-400';
-    const borderColor = isA ? 'border-lime-500/20' : 'border-emerald-500/20';
-
+function PointsTable({ data }) {
     return (
-        <div className={`bg-neutral-900/80 backdrop-blur-md rounded-xl border ${borderColor} overflow-hidden`}>
+        <div className="bg-neutral-900/80 backdrop-blur-md rounded-xl border border-lime-500/20 overflow-hidden max-w-4xl w-full">
             <div className="p-4 border-b border-white/5 flex justify-between items-center">
-                <h2 className={`text-xl font-bold ${headerColor}`}>{title}</h2>
+                <h2 className="text-xl font-bold text-lime-400">Standings</h2>
             </div>
             <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
@@ -48,7 +42,7 @@ function PointsTable({ title, data, color }) {
                                 <tr key={team.id} className="hover:bg-white/5 transition-colors">
                                     <td className="p-3 font-medium text-white flex items-center gap-2">
                                         <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold 
-                                            ${i < 4 ? (isA ? 'bg-lime-500 text-black' : 'bg-emerald-500 text-black') : 'bg-neutral-800 text-neutral-500'}`}>
+                                            ${i < 4 ? 'bg-lime-500 text-black' : 'bg-neutral-800 text-neutral-500'}`}>
                                             {i + 1}
                                         </span>
                                         {team.player1} & {team.player2}

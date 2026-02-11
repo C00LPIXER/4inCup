@@ -1,48 +1,36 @@
-export const GROUPS = {
-    A: 'A',
-    B: 'B'
-};
-
 export const STAGES = {
     GROUP: 'Group Stage',
     SEMI_FINAL: 'Semi Final',
     FINAL: 'Final'
 };
 
-export const createTeam = (player1, player2, group) => ({
+export const createTeam = (player1, player2) => ({
     id: crypto.randomUUID(),
     player1,
     player2,
-    group,
 });
 
 export const generateGroupFixtures = (teams) => {
-    // Separate teams by group
-    const groupA = teams.filter(t => t.group === GROUPS.A);
-    const groupB = teams.filter(t => t.group === GROUPS.B);
-
-    const generate = (groupTeams, groupName) => {
-        const fixtures = [];
-        for (let i = 0; i < groupTeams.length; i++) {
-            for (let j = i + 1; j < groupTeams.length; j++) {
-                fixtures.push({
-                    id: crypto.randomUUID(),
-                    teamAId: groupTeams[i].id,
-                    teamBId: groupTeams[j].id,
-                    scoreA: 0,
-                    scoreB: 0,
-                    group: groupName,
-                    stage: STAGES.GROUP,
-                    matchNumber: fixtures.length + 1, // Will reindex later if needed
-                    completed: false,
-                    winnerId: null
-                });
-            }
+    const fixtures = [];
+    let matchNum = 1;
+    
+    for (let i = 0; i < teams.length; i++) {
+        for (let j = i + 1; j < teams.length; j++) {
+            fixtures.push({
+                id: crypto.randomUUID(),
+                teamAId: teams[i].id,
+                teamBId: teams[j].id,
+                scoreA: 0,
+                scoreB: 0,
+                stage: STAGES.GROUP,
+                matchNumber: matchNum++,
+                completed: false,
+                winnerId: null
+            });
         }
-        return fixtures;
-    };
-
-    return [...generate(groupA, GROUPS.A), ...generate(groupB, GROUPS.B)];
+    }
+    
+    return fixtures;
 };
 
 
@@ -87,28 +75,24 @@ export const calculateStandings = (teams, matches) => {
     return Object.values(stats);
 };
 
-export const getSortedStandings = (standings, group) => {
-    return standings
-        .filter(t => t.group === group)
-        .sort((a, b) => {
-            if (b.points !== a.points) return b.points - a.points;
-            if (b.scoreDiff !== a.scoreDiff) return b.scoreDiff - a.scoreDiff;
-            // Tie-breaker? Head-to-head would be better but simple score diff is requested
-            return 0;
-        });
+export const getSortedStandings = (standings) => {
+    return standings.sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        if (b.scoreDiff !== a.scoreDiff) return b.scoreDiff - a.scoreDiff;
+        return 0;
+    });
 };
 
-export const generateSemiFinals = (groupAStandings, groupBStandings) => {
-    if (groupAStandings.length < 2 || groupBStandings.length < 2) return [];
+export const generateSemiFinals = (standings) => {
+    if (standings.length < 4) return [];
 
     const semiFinals = [
         {
             id: crypto.randomUUID(),
-            teamAId: groupAStandings[0].id, // A1
-            teamBId: groupBStandings[1].id, // B2
+            teamAId: standings[0].id, // 1st place
+            teamBId: standings[3].id, // 4th place
             scoreA: 0,
             scoreB: 0,
-            group: null,
             stage: STAGES.SEMI_FINAL,
             matchNumber: 'SF1',
             completed: false,
@@ -116,11 +100,10 @@ export const generateSemiFinals = (groupAStandings, groupBStandings) => {
         },
         {
             id: crypto.randomUUID(),
-            teamAId: groupBStandings[0].id, // B1
-            teamBId: groupAStandings[1].id, // A2
+            teamAId: standings[1].id, // 2nd place
+            teamBId: standings[2].id, // 3rd place
             scoreA: 0,
             scoreB: 0,
-            group: null,
             stage: STAGES.SEMI_FINAL,
             matchNumber: 'SF2',
             completed: false,
@@ -139,7 +122,6 @@ export const generateFinal = (sf1, sf2) => {
         teamBId: sf2.winnerId,
         scoreA: 0,
         scoreB: 0,
-        group: null,
         stage: STAGES.FINAL,
         matchNumber: 'FINAL',
         completed: false,

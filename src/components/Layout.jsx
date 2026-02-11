@@ -11,8 +11,7 @@ export function Layout({ children }) {
         { name: 'Standings', path: '/standings', icon: Table },
         { name: 'Groups', path: '/groups', icon: Users },
         { name: 'Fixtures', path: '/fixtures', icon: Calendar },
-        { name: 'Bracket', path: '/bracket', icon: Shield },
-        { name: 'Admin', path: '/admin', icon: Settings },
+        { name: 'Settings', path: '/settings', icon: Settings },
     ];
 
     return (

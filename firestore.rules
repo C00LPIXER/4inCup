@@ -1,0 +1,11 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Tournament data - allow read/write for everyone
+    match /tournaments/{tournamentId} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}
