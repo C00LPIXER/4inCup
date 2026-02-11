@@ -2,7 +2,7 @@ import { AuthProvider } from './context/AuthContext'
 import { TournamentProvider } from './context/TournamentContext'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Layout } from './components/Layout'
-import { DatasetSwitcher } from './components/DatasetSwitcher'
+// import { DatasetSwitcher } from './components/DatasetSwitcher'
 import { Home } from './pages/Home'
 import { Groups } from './pages/Groups'
 import { Fixtures } from './pages/Fixtures'
@@ -23,7 +23,7 @@ function App() {
               <Route path="/settings" element={<Settings />} />
             </Routes>
           </Layout>
-          <DatasetSwitcher />
+          {/* <DatasetSwitcher /> */}
         </BrowserRouter>
       </TournamentProvider>
     </AuthProvider>
