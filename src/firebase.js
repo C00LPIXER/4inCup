@@ -16,21 +16,38 @@ if (!enabled) {
   console.error('❌ Firebase configuration missing! Check your .env file.');
 }
 
-let docRef;
+let app, db;
 if (enabled) {
-  if (!getApps().length) initializeApp(firebaseConfig);
-  const db = getFirestore();
-  docRef = doc(db, 'tournaments', 'default');
+  if (!getApps().length) app = initializeApp(firebaseConfig);
+  db = getFirestore();
+}
+
+// Get current dataset from environment variable (default: 'production')
+function getCurrentDataset() {
+  return import.meta.env.VITE_DATASET || 'production';
+}
+
+// Get collection name based on dataset
+function getCollectionName() {
+  const dataset = getCurrentDataset();
+  return dataset === 'test' ? 'test_tournaments' : 'tournaments';
+}
+
+// Get document reference based on current dataset
+function getDocRef() {
+  if (!enabled) throw new Error('Firebase not configured');
+  const collectionName = getCollectionName();
+  return doc(db, collectionName, 'default');
 }
 
 export async function getTournament() {
-  if (!enabled) throw new Error('Firebase not configured');
+  const docRef = getDocRef();
   const snap = await getDoc(docRef);
   return snap.exists() ? snap.data() : null;
 }
 
 export function subscribeTournament(cb) {
-  if (!enabled) throw new Error('Firebase not configured');
+  const docRef = getDocRef();
   return onSnapshot(docRef, (snap) => {
     cb(snap.exists() ? snap.data() : null);
   }, (error) => {
@@ -40,7 +57,7 @@ export function subscribeTournament(cb) {
 }
 
 export async function saveTournament(data) {
-  if (!enabled) throw new Error('Firebase not configured');
+  const docRef = getDocRef();
   await setDoc(docRef, data);
 }
 

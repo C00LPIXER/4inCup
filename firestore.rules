@@ -7,5 +7,17 @@ service cloud.firestore {
       allow read: if true;
       allow write: if true;
     }
+    
+    // Test tournament data - allow read/write for everyone
+    match /test_tournaments/{tournamentId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Settings/auth data - allow read/write for everyone
+    match /settings/{document} {
+      allow read: if true;
+      allow write: if true;
+    }
   }
 }

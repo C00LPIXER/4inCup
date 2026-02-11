@@ -84,7 +84,55 @@ export const getSortedStandings = (standings) => {
 };
 
 export const generateSemiFinals = (standings) => {
-    if (standings.length < 4) return [];
+    // Always generate 4 skeleton semi-final matches
+    if (standings.length < 4) {
+        return [
+            {
+                id: crypto.randomUUID(),
+                teamAId: null,
+                teamBId: null,
+                scoreA: 0,
+                scoreB: 0,
+                stage: STAGES.SEMI_FINAL,
+                matchNumber: 'SF1',
+                completed: false,
+                winnerId: null
+            },
+            {
+                id: crypto.randomUUID(),
+                teamAId: null,
+                teamBId: null,
+                scoreA: 0,
+                scoreB: 0,
+                stage: STAGES.SEMI_FINAL,
+                matchNumber: 'SF2',
+                completed: false,
+                winnerId: null
+            },
+            {
+                id: crypto.randomUUID(),
+                teamAId: null,
+                teamBId: null,
+                scoreA: 0,
+                scoreB: 0,
+                stage: STAGES.SEMI_FINAL,
+                matchNumber: 'SF3',
+                completed: false,
+                winnerId: null
+            },
+            {
+                id: crypto.randomUUID(),
+                teamAId: null,
+                teamBId: null,
+                scoreA: 0,
+                scoreB: 0,
+                stage: STAGES.SEMI_FINAL,
+                matchNumber: 'SF4',
+                completed: false,
+                winnerId: null
+            }
+        ];
+    }
 
     const semiFinals = [
         {
@@ -108,24 +156,85 @@ export const generateSemiFinals = (standings) => {
             matchNumber: 'SF2',
             completed: false,
             winnerId: null
+        },
+        {
+            id: crypto.randomUUID(),
+            teamAId: null,
+            teamBId: null,
+            scoreA: 0,
+            scoreB: 0,
+            stage: STAGES.SEMI_FINAL,
+            matchNumber: 'SF3',
+            completed: false,
+            winnerId: null
+        },
+        {
+            id: crypto.randomUUID(),
+            teamAId: null,
+            teamBId: null,
+            scoreA: 0,
+            scoreB: 0,
+            stage: STAGES.SEMI_FINAL,
+            matchNumber: 'SF4',
+            completed: false,
+            winnerId: null
         }
     ];
     return semiFinals;
 };
 
 export const generateFinal = (sf1, sf2) => {
-    if (!sf1?.winnerId || !sf2?.winnerId) return [];
+    // Always generate 2 skeleton final matches
+    if (!sf1?.winnerId || !sf2?.winnerId) {
+        return [
+            {
+                id: crypto.randomUUID(),
+                teamAId: null,
+                teamBId: null,
+                scoreA: 0,
+                scoreB: 0,
+                stage: STAGES.FINAL,
+                matchNumber: 'FINAL1',
+                completed: false,
+                winnerId: null
+            },
+            {
+                id: crypto.randomUUID(),
+                teamAId: null,
+                teamBId: null,
+                scoreA: 0,
+                scoreB: 0,
+                stage: STAGES.FINAL,
+                matchNumber: 'FINAL2',
+                completed: false,
+                winnerId: null
+            }
+        ];
+    }
 
-    return [{
-        id: crypto.randomUUID(),
-        teamAId: sf1.winnerId,
-        teamBId: sf2.winnerId,
-        scoreA: 0,
-        scoreB: 0,
-        stage: STAGES.FINAL,
-        matchNumber: 'FINAL',
-        completed: false,
-        winnerId: null
-    }];
+    return [
+        {
+            id: crypto.randomUUID(),
+            teamAId: sf1.winnerId,
+            teamBId: sf2.winnerId,
+            scoreA: 0,
+            scoreB: 0,
+            stage: STAGES.FINAL,
+            matchNumber: 'FINAL1',
+            completed: false,
+            winnerId: null
+        },
+        {
+            id: crypto.randomUUID(),
+            teamAId: null,
+            teamBId: null,
+            scoreA: 0,
+            scoreB: 0,
+            stage: STAGES.FINAL,
+            matchNumber: 'FINAL2',
+            completed: false,
+            winnerId: null
+        }
+    ];
 };
 

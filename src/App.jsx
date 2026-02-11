@@ -1,6 +1,8 @@
+import { AuthProvider } from './context/AuthContext'
 import { TournamentProvider } from './context/TournamentContext'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Layout } from './components/Layout'
+import { DatasetSwitcher } from './components/DatasetSwitcher'
 import { Home } from './pages/Home'
 import { Groups } from './pages/Groups'
 import { Fixtures } from './pages/Fixtures'
@@ -9,19 +11,22 @@ import { Settings } from './pages/Settings'
 
 function App() {
   return (
-    <TournamentProvider>
-      <BrowserRouter>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/groups" element={<Groups />} />
-            <Route path="/fixtures" element={<Fixtures />} />
-            <Route path="/standings" element={<Standings />} />
-            <Route path="/settings" element={<Settings />} />
-          </Routes>
-        </Layout>
-      </BrowserRouter>
-    </TournamentProvider>
+    <AuthProvider>
+      <TournamentProvider>
+        <BrowserRouter>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/groups" element={<Groups />} />
+              <Route path="/fixtures" element={<Fixtures />} />
+              <Route path="/standings" element={<Standings />} />
+              <Route path="/settings" element={<Settings />} />
+            </Routes>
+          </Layout>
+          <DatasetSwitcher />
+        </BrowserRouter>
+      </TournamentProvider>
+    </AuthProvider>
   )
 }
 

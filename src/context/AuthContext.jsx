@@ -3,35 +3,54 @@ import { getAuth, setAuth, checkAuth } from '../utils/auth';
 
 const AuthContext = createContext();
 
+// Default credentials
+const DEFAULT_USERNAME = '4inDegree';
+const DEFAULT_PASSWORD = '9778574627';
+
 export function AuthProvider({ children }) {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        checkAuth().then(result => {
-            setIsAuthenticated(result);
+        const initAuth = async () => {
+            // Check session first
+            const sessionAuth = sessionStorage.getItem('authenticated');
+            if (sessionAuth === 'true') {
+                setIsAuthenticated(true);
+            }
+
+            // Initialize Firebase credentials if not exists
+            try {
+                const credentials = await getAuth();
+                if (!credentials || !credentials.username) {
+                    await setAuth(DEFAULT_USERNAME, DEFAULT_PASSWORD);
+                }
+            } catch (error) {
+                console.error('Error initializing auth:', error);
+            }
+
             setLoading(false);
-        });
+        };
+
+        initAuth();
     }, []);
 
     const login = async (username, password) => {
-        const credentials = await getAuth();
-        
-        // First time setup - no credentials exist
-        if (!credentials || !credentials.username) {
-            await setAuth(username, password);
-            setIsAuthenticated(true);
-            return { success: true, firstTime: true };
-        }
+        try {
+            const credentials = await getAuth();
+            
+            // Check credentials against Firebase
+            if (credentials && credentials.username === username && credentials.password === password) {
+                sessionStorage.setItem('authenticated', 'true');
+                setIsAuthenticated(true);
+                return { success: true };
+            }
 
-        // Check credentials
-        if (credentials.username === username && credentials.password === password) {
-            sessionStorage.setItem('authenticated', 'true');
-            setIsAuthenticated(true);
-            return { success: true, firstTime: false };
+            return { success: false, error: 'Invalid credentials' };
+        } catch (error) {
+            console.error('Login error:', error);
+            return { success: false, error: 'Login failed. Please try again.' };
         }
-
-        return { success: false, message: 'Invalid credentials' };
     };
 
     const logout = () => {

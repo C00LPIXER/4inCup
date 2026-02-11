@@ -1,28 +1,133 @@
 import { useState } from 'react';
 import { useTournament } from '../context/TournamentContext';
+import { useAuth } from '../context/AuthContext';
 import { STAGES } from '../utils/logic';
-import { Plus, Save, Play, RefreshCw, Trash2, ArrowRight } from 'lucide-react';
+import { Plus, Save, Play, RefreshCw, Trash2, ArrowRight, Lock, LogOut, Key } from 'lucide-react';
 
-export function Admin() {
+export function Settings() {
+    const { isAuthenticated, logout } = useAuth();
+
+    if (!isAuthenticated) {
+        return <LoginForm />;
+    }
+
+    return <SettingsDashboard logout={logout} />;
+}
+
+function LoginForm() {
+    const { login } = useAuth();
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
+
+        const result = await login(username, password);
+        setLoading(false);
+
+        if (!result.success) {
+            setError(result.error || 'Invalid credentials');
+        }
+    };
+
+    return (
+        <div className="min-h-[70vh] flex items-center justify-center">
+            <div className="w-full max-w-md">
+                <div className="bg-neutral-900 border border-white/10 p-8 rounded-xl shadow-2xl">
+                    <div className="flex justify-center mb-6">
+                        <div className="bg-lime-500/10 p-4 rounded-full">
+                            <Lock className="w-8 h-8 text-lime-400" />
+                        </div>
+                    </div>
+                    <h2 className="text-2xl font-bold text-center mb-2">Settings Access</h2>
+                    <p className="text-neutral-400 text-center text-sm mb-6">
+                        Enter your credentials to access tournament settings
+                    </p>
+
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-300 mb-2">
+                                Username
+                            </label>
+                            <input
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                required
+                                className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-lime-500 outline-none transition-colors"
+                                placeholder="Enter username"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-300 mb-2">
+                                Password
+                            </label>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-lime-500 outline-none transition-colors"
+                                placeholder="Enter password"
+                            />
+                        </div>
+
+                        {error && (
+                            <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg text-sm">
+                                {error}
+                            </div>
+                        )}
+
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full bg-lime-500 hover:bg-lime-400 text-black font-bold py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {loading ? 'Authenticating...' : 'Login'}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function SettingsDashboard({ logout }) {
     const { data, actions } = useTournament();
-    const [activeTab, setActiveTab] = useState('TEAMS'); // TEAMS, MATCHES, SETTINGS
+    const [activeTab, setActiveTab] = useState('TEAMS');
 
     return (
         <div className="max-w-4xl mx-auto space-y-8">
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-                Admin Dashboard
-            </h1>
+            <div className="flex justify-between items-center">
+                <h1 className="text-3xl font-bold flex items-center gap-2">
+                    Settings Dashboard
+                </h1>
+                <button
+                    onClick={logout}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors border border-red-500/30"
+                >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                </button>
+            </div>
 
             <div className="flex gap-2 border-b border-white/10 pb-1">
                 <TabButton active={activeTab === 'TEAMS'} onClick={() => setActiveTab('TEAMS')} label="Manage Teams" />
                 <TabButton active={activeTab === 'MATCHES'} onClick={() => setActiveTab('MATCHES')} label="Update Scores" />
-                <TabButton active={activeTab === 'SETTINGS'} onClick={() => setActiveTab('SETTINGS')} label="Settings" />
+                <TabButton active={activeTab === 'TOURNAMENT'} onClick={() => setActiveTab('TOURNAMENT')} label="Tournament" />
+                <TabButton active={activeTab === 'SECURITY'} onClick={() => setActiveTab('SECURITY')} label="Security" />
             </div>
 
             <div className="min-h-[400px]">
                 {activeTab === 'TEAMS' && <TeamsPanel data={data} actions={actions} />}
                 {activeTab === 'MATCHES' && <MatchesPanel data={data} actions={actions} />}
-                {activeTab === 'SETTINGS' && <SettingsPanel data={data} actions={actions} />}
+                {activeTab === 'TOURNAMENT' && <TournamentPanel data={data} actions={actions} />}
+                {activeTab === 'SECURITY' && <SecurityPanel />}
             </div>
         </div>
     );
@@ -282,7 +387,7 @@ function ScoreEditor({ match, teams, onUpdate, onUpdateTeams, onReset }) {
     )
 }
 
-function SettingsPanel({ data, actions }) {
+function TournamentPanel({ data, actions }) {
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="bg-white/5 p-6 rounded-xl border border-white/10">
@@ -325,6 +430,117 @@ function SettingsPanel({ data, actions }) {
                 >
                     <RefreshCw className="w-4 h-4" /> Reset Tournament Data
                 </button>
+            </div>
+        </div>
+    )
+}
+
+function SecurityPanel() {
+    const { changePassword } = useAuth();
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleChangePassword = async (e) => {
+        e.preventDefault();
+        setError('');
+        setSuccess('');
+
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            setError('All fields are required');
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            setError('New passwords do not match');
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            setError('New password must be at least 6 characters');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const result = await changePassword(currentPassword, newPassword);
+            if (result.success) {
+                setSuccess('Password changed successfully');
+                setCurrentPassword('');
+                setNewPassword('');
+                setConfirmPassword('');
+            } else {
+                setError(result.error || 'Failed to change password');
+            }
+        } catch (err) {
+            setError('An unexpected error occurred');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="bg-white/5 p-6 rounded-xl border border-white/10">
+                <h3 className="text-lg font-bold mb-4">Change Password</h3>
+                <form onSubmit={handleChangePassword} className="space-y-4">
+                    {error && (
+                        <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-lg text-sm">
+                            {error}
+                        </div>
+                    )}
+                    {success && (
+                        <div className="bg-green-500/10 border border-green-500/20 text-green-500 p-3 rounded-lg text-sm">
+                            {success}
+                        </div>
+                    )}
+                    <div>
+                        <label className="block text-sm font-medium mb-2">Current Password</label>
+                        <input
+                            type="password"
+                            value={currentPassword}
+                            onChange={(e) => setCurrentPassword(e.target.value)}
+                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-lime-500 text-white"
+                            placeholder="Enter current password"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-2">New Password</label>
+                        <input
+                            type="password"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-lime-500 text-white"
+                            placeholder="Enter new password (min 6 characters)"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-2">Confirm New Password</label>
+                        <input
+                            type="password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-lime-500 text-white"
+                            placeholder="Confirm new password"
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full py-3 bg-lime-500 hover:bg-lime-400 text-black font-bold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                        {isLoading ? (
+                            <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                        ) : (
+                            <>
+                                <Lock className="w-5 h-5" /> Change Password
+                            </>
+                        )}
+                    </button>
+                </form>
             </div>
         </div>
     )
