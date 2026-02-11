@@ -254,17 +254,185 @@ function TeamsPanel({ data, actions }) {
 
 
 function MatchesPanel({ data, actions }) {
+    const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'played', 'notPlayed'
+    const [showAddMatch, setShowAddMatch] = useState(false);
+    const [newMatch, setNewMatch] = useState({
+        teamAId: '',
+        teamBId: '',
+        matchNumber: '',
+        stage: STAGES.GROUP
+    });
+
     if (data.matches.length === 0) {
         return (
-            <div className="text-center py-12 text-neutral-500">
-                Matches have not been generated yet. Go to Settings to start the tournament.
+            <div className="text-center py-12 space-y-4">
+                <p className="text-neutral-500">Matches have not been generated yet.</p>
+                <button
+                    onClick={actions.startTournament}
+                    disabled={data.teams.length < 4}
+                    className={`py-3 px-8 rounded-lg font-bold flex items-center justify-center gap-2 mx-auto transition-colors
+                        ${data.teams.length < 4 
+                            ? 'bg-neutral-800 text-neutral-500 cursor-not-allowed' 
+                            : 'bg-lime-500 hover:bg-lime-400 text-black'}`}
+                >
+                    <Play className="w-5 h-5" /> Generate Matches & Start Tournament
+                </button>
+                {data.teams.length < 4 && (
+                    <p className="text-red-400 text-sm">Need at least 4 teams to start the tournament</p>
+                )}
             </div>
         )
     }
 
+    const filteredMatches = data.matches.filter(match => {
+        if (filterStatus === 'played') return match.completed;
+        if (filterStatus === 'notPlayed') return !match.completed;
+        return true;
+    });
+
+    const handleAddMatch = () => {
+        if (!newMatch.teamAId || !newMatch.teamBId || !newMatch.matchNumber) {
+            alert('Please fill in all fields');
+            return;
+        }
+        if (newMatch.teamAId === newMatch.teamBId) {
+            alert('Teams must be different');
+            return;
+        }
+        
+        const match = {
+            id: crypto.randomUUID(),
+            teamAId: newMatch.teamAId,
+            teamBId: newMatch.teamBId,
+            scoreA: 0,
+            scoreB: 0,
+            stage: newMatch.stage,
+            matchNumber: newMatch.matchNumber,
+            completed: false,
+            winnerId: null
+        };
+        
+        actions.addMatch(match);
+        
+        setNewMatch({ teamAId: '', teamBId: '', matchNumber: '', stage: STAGES.GROUP });
+        setShowAddMatch(false);
+    };
+
     return (
         <div className="space-y-4 animate-in fade-in duration-500">
-            {data.matches.map(match => (
+            <div className="flex justify-between items-center mb-6">
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setFilterStatus('all')}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                            filterStatus === 'all' 
+                                ? 'bg-lime-500 text-black' 
+                                : 'bg-white/5 text-neutral-400 hover:bg-white/10'
+                        }`}
+                    >
+                        All ({data.matches.length})
+                    </button>
+                    <button
+                        onClick={() => setFilterStatus('played')}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                            filterStatus === 'played' 
+                                ? 'bg-green-500 text-black' 
+                                : 'bg-white/5 text-neutral-400 hover:bg-white/10'
+                        }`}
+                    >
+                        Played ({data.matches.filter(m => m.completed).length})
+                    </button>
+                    <button
+                        onClick={() => setFilterStatus('notPlayed')}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                            filterStatus === 'notPlayed' 
+                                ? 'bg-red-500 text-black' 
+                                : 'bg-white/5 text-neutral-400 hover:bg-white/10'
+                        }`}
+                    >
+                        Not Played ({data.matches.filter(m => !m.completed).length})
+                    </button>
+                </div>
+                
+                <button
+                    onClick={() => setShowAddMatch(!showAddMatch)}
+                    className="px-4 py-2 bg-lime-500 hover:bg-lime-400 text-black font-bold rounded-lg flex items-center gap-2 transition-colors"
+                >
+                    <Plus className="w-4 h-4" /> Add Match
+                </button>
+            </div>
+
+            {showAddMatch && (
+                <div className="bg-neutral-900 border border-lime-500/50 p-4 rounded-lg mb-4">
+                    <h3 className="text-lg font-bold mb-4 text-lime-400">Create New Match</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label className="block text-xs text-neutral-400 mb-1">Team A</label>
+                            <select
+                                value={newMatch.teamAId}
+                                onChange={e => setNewMatch({...newMatch, teamAId: e.target.value})}
+                                className="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-white"
+                            >
+                                <option value="">Select Team</option>
+                                {data.teams.map(t => (
+                                    <option key={t.id} value={t.id}>{t.player1} & {t.player2}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs text-neutral-400 mb-1">Team B</label>
+                            <select
+                                value={newMatch.teamBId}
+                                onChange={e => setNewMatch({...newMatch, teamBId: e.target.value})}
+                                className="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-white"
+                            >
+                                <option value="">Select Team</option>
+                                {data.teams.map(t => (
+                                    <option key={t.id} value={t.id}>{t.player1} & {t.player2}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs text-neutral-400 mb-1">Match Number</label>
+                            <input
+                                type="text"
+                                value={newMatch.matchNumber}
+                                onChange={e => setNewMatch({...newMatch, matchNumber: e.target.value})}
+                                placeholder="e.g., 1 or SF1"
+                                className="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-white"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs text-neutral-400 mb-1">Stage</label>
+                            <select
+                                value={newMatch.stage}
+                                onChange={e => setNewMatch({...newMatch, stage: e.target.value})}
+                                className="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-white"
+                            >
+                                <option value={STAGES.GROUP}>Group Stage</option>
+                                <option value={STAGES.SEMI_FINAL}>Semi Final</option>
+                                <option value={STAGES.FINAL}>Final</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                        <button
+                            onClick={handleAddMatch}
+                            className="px-4 py-2 bg-lime-500 hover:bg-lime-400 text-black font-bold rounded transition-colors"
+                        >
+                            Create Match
+                        </button>
+                        <button
+                            onClick={() => setShowAddMatch(false)}
+                            className="px-4 py-2 bg-neutral-700 hover:bg-neutral-600 text-white rounded transition-colors"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
+            
+            {filteredMatches.map(match => (
                 <ScoreEditor
                     key={match.id}
                     match={match}
@@ -297,7 +465,11 @@ function ScoreEditor({ match, teams, onUpdate, onUpdateTeams, onReset }) {
     };
 
     return (
-        <div className="bg-white/5 p-4 rounded-lg flex flex-col md:flex-row items-center gap-4 justify-between border border-white/5">
+        <div className={`p-4 rounded-lg flex flex-col md:flex-row items-center gap-4 justify-between border-2 ${
+            match.completed 
+                ? 'bg-green-900/20 border-green-500/50' 
+                : 'bg-red-900/20 border-red-500/50'
+        }`}>
             <div className="flex-1 w-full flex justify-between md:justify-start items-center gap-4">
                 <div className="text-xs font-mono text-neutral-500 w-16 text-center shrink-0" onClick={() => setIsEditingTeams(!isEditingTeams)} title="Click to edit teams">
                     {match.matchNumber}

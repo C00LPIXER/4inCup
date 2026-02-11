@@ -26,31 +26,23 @@ export function Fixtures() {
     const allSemisCompleted = semiMatches.length === 2 && semiMatches.every(m => m.completed);
     const canGenerateFinal = allSemisCompleted && !finalMatch;
 
+    // Auto-generate semi-finals when all group matches are completed
+    useEffect(() => {
+        if (canGenerateSemis) {
+            actions.generateNextStage();
+        }
+    }, [canGenerateSemis]);
+
+    // Auto-generate final when all semi-finals are completed
+    useEffect(() => {
+        if (canGenerateFinal) {
+            actions.generateNextStage();
+        }
+    }, [canGenerateFinal]);
+
     return (
         <div className="space-y-8">
             <h1 className="text-4xl font-bold text-center">Tournament Bracket</h1>
-            
-            {canGenerateSemis && (
-                <div className="flex justify-center">
-                    <button
-                        onClick={actions.generateNextStage}
-                        className="bg-lime-500 hover:bg-lime-400 text-black font-bold py-3 px-6 rounded-lg flex items-center gap-2 transition-colors"
-                    >
-                        <ArrowRight className="w-5 h-5" /> Generate Semi Finals
-                    </button>
-                </div>
-            )}
-            
-            {canGenerateFinal && (
-                <div className="flex justify-center">
-                    <button
-                        onClick={actions.generateNextStage}
-                        className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 px-6 rounded-lg flex items-center gap-2 transition-colors"
-                    >
-                        <Trophy className="w-5 h-5" /> Generate Final
-                    </button>
-                </div>
-            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Group Stage Column */}

@@ -166,6 +166,13 @@ export function TournamentProvider({ children }) {
             }));
         },
 
+        addMatch: (match) => {
+            setData(prev => ({
+                ...prev,
+                matches: [...prev.matches, match]
+            }));
+        },
+
         generateNextStage: () => {
             // Calculate current standings
             const standings = calculateStandings(data.teams, data.matches);
