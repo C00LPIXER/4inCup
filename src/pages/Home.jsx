@@ -28,7 +28,7 @@ export function Home() {
           backgroundRepeat: "no-repeat",
         }}
       >
-        {/* Dark Overlay for readability */}
+        {/* Dark Overlay for r */}
         <div className="absolute inset-0 bg-black/60" />
       </div>
 
