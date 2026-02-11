@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useTournament } from '../context/TournamentContext';
 import { useAuth } from '../context/AuthContext';
 import { STAGES, calculateStandings, getSortedStandings } from '../utils/logic';
-import { CheckCircle, Clock, Trophy, ArrowRight } from 'lucide-react';
+import { CheckCircle, Clock, Trophy, ArrowRight, ChevronUp, ChevronDown } from 'lucide-react';
 
 export function Fixtures() {
     const { data, actions } = useTournament();
@@ -248,22 +248,66 @@ function MatchCard({ match, teamA, teamB, isAuthenticated }) {
                 {editing ? (
                     <div 
                         ref={inputContainerRef}
-                        className="flex items-center gap-3"
+                        className="flex items-center gap-2 sm:gap-3"
                     >
-                        <input
-                            type="number"
-                            value={scoreA}
-                            onChange={e => setScoreA(Number(e.target.value))}
-                            autoFocus
-                            className="w-24 h-16 text-4xl text-center font-bold rounded bg-black/60 border-2 border-lime-400 text-lime-400 focus:outline-none focus:ring-2 focus:ring-lime-500"
-                        />
-                        <span className="text-3xl font-bold text-white">-</span>
-                        <input
-                            type="number"
-                            value={scoreB}
-                            onChange={e => setScoreB(Number(e.target.value))}
-                            className="w-24 h-16 text-4xl text-center font-bold rounded bg-black/60 border-2 border-lime-400 text-lime-400 focus:outline-none focus:ring-2 focus:ring-lime-500"
-                        />
+                        {/* Team A Score with Arrow Buttons */}
+                        <div className="flex items-center gap-1">
+                            <input
+                                type="number"
+                                value={scoreA}
+                                onChange={e => setScoreA(Number(e.target.value))}
+                                autoFocus
+                                className="w-16 sm:w-24 h-12 sm:h-16 text-2xl sm:text-4xl text-center font-bold rounded bg-black/60 border-2 border-lime-400 text-lime-400 focus:outline-none focus:ring-2 focus:ring-lime-500"
+                            />
+                            <div className="flex flex-col gap-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setScoreA(Math.max(0, scoreA + 1))}
+                                    className="p-1 bg-lime-500/20 hover:bg-lime-500/40 border border-lime-400/50 rounded transition-colors"
+                                    aria-label="Increase Team A score"
+                                >
+                                    <ChevronUp className="w-4 h-4 text-lime-400" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setScoreA(Math.max(0, scoreA - 1))}
+                                    className="p-1 bg-lime-500/20 hover:bg-lime-500/40 border border-lime-400/50 rounded transition-colors"
+                                    aria-label="Decrease Team A score"
+                                >
+                                    <ChevronDown className="w-4 h-4 text-lime-400" />
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <span className="text-2xl sm:text-3xl font-bold text-white">-</span>
+                        
+                        {/* Team B Score with Arrow Buttons */}
+                        <div className="flex items-center gap-1">
+                            <input
+                                type="number"
+                                value={scoreB}
+                                onChange={e => setScoreB(Number(e.target.value))}
+                                className="w-16 sm:w-24 h-12 sm:h-16 text-2xl sm:text-4xl text-center font-bold rounded bg-black/60 border-2 border-lime-400 text-lime-400 focus:outline-none focus:ring-2 focus:ring-lime-500"
+                            />
+                            <div className="flex flex-col gap-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setScoreB(Math.max(0, scoreB + 1))}
+                                    className="p-1 bg-lime-500/20 hover:bg-lime-500/40 border border-lime-400/50 rounded transition-colors"
+                                    aria-label="Increase Team B score"
+                                >
+                                    <ChevronUp className="w-4 h-4 text-lime-400" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setScoreB(Math.max(0, scoreB - 1))}
+                                    className="p-1 bg-lime-500/20 hover:bg-lime-500/40 border border-lime-400/50 rounded transition-colors"
+                                    aria-label="Decrease Team B score"
+                                >
+                                    <ChevronDown className="w-4 h-4 text-lime-400" />
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 ) : (
                     <div
