@@ -32,9 +32,9 @@ export function Home() {
         <div className="absolute inset-0 bg-black/60" />
       </div>
 
-      <div className="relative z-10 container mx-auto px-4 py-12 flex flex-col gap-12">
+      <div className="relative z-10 container mx-auto px-4 py-6 flex flex-col gap-12">
         {showWinnerSlot && (
-          <section className="text-center py-8 animate-in fade-in zoom-in duration-700">
+          <section className="text-center py-6 animate-in fade-in zoom-in duration-700">
             <div className={`backdrop-blur-md border-2 rounded-3xl p-8 max-w-2xl mx-auto shadow-2xl ${
               winner 
                 ? 'bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border-yellow-400/50 shadow-yellow-500/20' 
@@ -42,11 +42,11 @@ export function Home() {
             }`}>
               {winner ? (
                 <>
-                  <Crown className="w-16 h-16 mx-auto mb-4 text-yellow-400 animate-pulse" />
-                  <h2 className="text-5xl font-bold text-yellow-400 mb-4 drop-shadow-lg">
+                  <Crown className="w-6 h-5 mx-auto mb-2 text-yellow-400 animate-pulse" />
+                  <h2 className="text-3xl font-bold text-yellow-400 mb-4 drop-shadow-lg">
                     🏆 Champions 🏆
                   </h2>
-                  <div className="text-4xl font-bold text-white mb-2 drop-shadow-lg">
+                  <div className="text-2xl font-bold text-white mb-2 drop-shadow-lg">
                     {winner.player1} & {winner.player2}
                   </div>
                   <p className="text-xl text-neutral-200 font-light">
@@ -71,7 +71,7 @@ export function Home() {
           </section>
         )}
 
-        <section className="text-center py-12">
+        <section className="text-center">
           <h1 className="text-6xl md:text-8xl font-bold text-white mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700 drop-shadow-2xl">
             4inCup
           </h1>
