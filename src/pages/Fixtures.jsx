@@ -79,9 +79,9 @@ export function Fixtures() {
                     </h2>
                     <div className="space-y-3">
                         {(() => {
-                            // Always show 4 semi-final slots
+                            // Always show 2 semi-final slots (for 4-team tournament)
                             const semiCards = [];
-                            for (let i = 0; i < 4; i++) {
+                            for (let i = 0; i < 2; i++) {
                                 const match = semiMatches[i];
                                 if (match) {
                                     const teamA = data.teams.find(t => t.id === match.teamAId);
@@ -122,44 +122,33 @@ export function Fixtures() {
                         <Trophy className="w-6 h-6" /> Final
                     </h2>
                     <div className="space-y-3">
-                        {(() => {
-                            // Always show 2 final slots
-                            const finalCards = [];
-                            for (let i = 0; i < 2; i++) {
-                                if (finalMatch && i === 0) {
-                                    finalCards.push(
-                                        <MatchCard 
-                                            key={finalMatch.id} 
-                                            match={finalMatch} 
-                                            teamA={data.teams.find(t => t.id === finalMatch.teamAId)} 
-                                            teamB={data.teams.find(t => t.id === finalMatch.teamBId)}
-                                            isAuthenticated={isAuthenticated} 
-                                        />
-                                    );
-                                } else {
-                                    finalCards.push(
-                                        <div key={i} className="bg-neutral-900/50 border-white/5 border rounded-lg p-3 flex flex-col gap-2 relative overflow-hidden transition-all duration-300 min-h-[72px] opacity-50">
-                                            <div className="flex justify-between text-xs text-neutral-500 font-medium uppercase tracking-wider">
-                                                <span>Match #FINAL{i+1}</span>
-                                                <span className="text-yellow-400 flex items-center gap-1"><Clock className="w-3 h-3" /> Scheduled</span>
-                                            </div>
-                                            <div className="flex items-center justify-between gap-2">
-                                                <div className="flex-1 text-right">
-                                                    <div className="font-bold text-sm text-white">&nbsp;</div>
-                                                </div>
-                                                <div className="px-3 py-1 bg-black/40 rounded text-lg font-mono font-bold text-white tracking-wide min-w-[60px] text-center border border-white/10">
-                                                    vs
-                                                </div>
-                                                <div className="flex-1 text-left">
-                                                    <div className="font-bold text-sm text-white">&nbsp;</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                }
-                            }
-                            return finalCards;
-                        })()}
+                        {finalMatch ? (
+                            <MatchCard 
+                                key={finalMatch.id} 
+                                match={finalMatch} 
+                                teamA={data.teams.find(t => t.id === finalMatch.teamAId)} 
+                                teamB={data.teams.find(t => t.id === finalMatch.teamBId)}
+                                isAuthenticated={isAuthenticated} 
+                            />
+                        ) : (
+                            <div className="bg-neutral-900/50 border-white/5 border rounded-lg p-3 flex flex-col gap-2 relative overflow-hidden transition-all duration-300 min-h-[72px] opacity-50">
+                                <div className="flex justify-between text-xs text-neutral-500 font-medium uppercase tracking-wider">
+                                    <span>Match #FINAL</span>
+                                    <span className="text-yellow-400 flex items-center gap-1"><Clock className="w-3 h-3" /> Scheduled</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-2">
+                                    <div className="flex-1 text-right">
+                                        <div className="font-bold text-sm text-white">&nbsp;</div>
+                                    </div>
+                                    <div className="px-3 py-1 bg-black/40 rounded text-lg font-mono font-bold text-white tracking-wide min-w-[60px] text-center border border-white/10">
+                                        vs
+                                    </div>
+                                    <div className="flex-1 text-left">
+                                        <div className="font-bold text-sm text-white">&nbsp;</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                     {finalMatch?.completed && (
                         <div className="mt-6 p-6 bg-yellow-900/20 border-2 border-yellow-500/50 rounded-lg text-center">

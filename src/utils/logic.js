@@ -84,8 +84,9 @@ export const getSortedStandings = (standings) => {
 };
 
 export const generateSemiFinals = (standings) => {
-    // Always generate 4 skeleton semi-final matches
+    // For a 4-team tournament, create 2 semi-final matches
     if (standings.length < 4) {
+        // Not enough teams, return empty skeleton matches
         return [
             {
                 id: crypto.randomUUID(),
@@ -108,32 +109,11 @@ export const generateSemiFinals = (standings) => {
                 matchNumber: 'SF2',
                 completed: false,
                 winnerId: null
-            },
-            {
-                id: crypto.randomUUID(),
-                teamAId: null,
-                teamBId: null,
-                scoreA: 0,
-                scoreB: 0,
-                stage: STAGES.SEMI_FINAL,
-                matchNumber: 'SF3',
-                completed: false,
-                winnerId: null
-            },
-            {
-                id: crypto.randomUUID(),
-                teamAId: null,
-                teamBId: null,
-                scoreA: 0,
-                scoreB: 0,
-                stage: STAGES.SEMI_FINAL,
-                matchNumber: 'SF4',
-                completed: false,
-                winnerId: null
             }
         ];
     }
 
+    // Create 2 semi-finals with top 4 teams
     const semiFinals = [
         {
             id: crypto.randomUUID(),
@@ -156,35 +136,13 @@ export const generateSemiFinals = (standings) => {
             matchNumber: 'SF2',
             completed: false,
             winnerId: null
-        },
-        {
-            id: crypto.randomUUID(),
-            teamAId: null,
-            teamBId: null,
-            scoreA: 0,
-            scoreB: 0,
-            stage: STAGES.SEMI_FINAL,
-            matchNumber: 'SF3',
-            completed: false,
-            winnerId: null
-        },
-        {
-            id: crypto.randomUUID(),
-            teamAId: null,
-            teamBId: null,
-            scoreA: 0,
-            scoreB: 0,
-            stage: STAGES.SEMI_FINAL,
-            matchNumber: 'SF4',
-            completed: false,
-            winnerId: null
         }
     ];
     return semiFinals;
 };
 
 export const generateFinal = (sf1, sf2) => {
-    // Always generate 2 skeleton final matches
+    // Generate 1 final match
     if (!sf1?.winnerId || !sf2?.winnerId) {
         return [
             {
@@ -194,18 +152,7 @@ export const generateFinal = (sf1, sf2) => {
                 scoreA: 0,
                 scoreB: 0,
                 stage: STAGES.FINAL,
-                matchNumber: 'FINAL1',
-                completed: false,
-                winnerId: null
-            },
-            {
-                id: crypto.randomUUID(),
-                teamAId: null,
-                teamBId: null,
-                scoreA: 0,
-                scoreB: 0,
-                stage: STAGES.FINAL,
-                matchNumber: 'FINAL2',
+                matchNumber: 'FINAL',
                 completed: false,
                 winnerId: null
             }
@@ -220,18 +167,7 @@ export const generateFinal = (sf1, sf2) => {
             scoreA: 0,
             scoreB: 0,
             stage: STAGES.FINAL,
-            matchNumber: 'FINAL1',
-            completed: false,
-            winnerId: null
-        },
-        {
-            id: crypto.randomUUID(),
-            teamAId: null,
-            teamBId: null,
-            scoreA: 0,
-            scoreB: 0,
-            stage: STAGES.FINAL,
-            matchNumber: 'FINAL2',
+            matchNumber: 'FINAL',
             completed: false,
             winnerId: null
         }

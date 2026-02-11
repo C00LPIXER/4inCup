@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import { useTournament } from "../context/TournamentContext";
-import { Calendar, Users, Trophy, Play } from "lucide-react";
+import { Calendar, Users, Trophy, Play, Crown } from "lucide-react";
 import { Groups } from "./Groups";
+import { STAGES } from "../utils/logic";
 
 export function Home() {
   const { data } = useTournament();
@@ -9,6 +10,11 @@ export function Home() {
 
   const matchCount = data.matches.length;
   const completedMatches = data.matches.filter((m) => m.completed).length;
+  
+  // Check for tournament winner
+  const finalMatch = data.matches.find((m) => m.stage === STAGES.FINAL);
+  const winner = finalMatch?.completed ? data.teams.find((t) => t.id === finalMatch.winnerId) : null;
+  const showWinnerSlot = finalMatch !== undefined; // Show slot if final match exists
 
   return (
     <div className="min-h-[calc(100vh-64px)] flex flex-col justify-center relative -mt-0">
@@ -27,6 +33,44 @@ export function Home() {
       </div>
 
       <div className="relative z-10 container mx-auto px-4 py-12 flex flex-col gap-12">
+        {showWinnerSlot && (
+          <section className="text-center py-8 animate-in fade-in zoom-in duration-700">
+            <div className={`backdrop-blur-md border-2 rounded-3xl p-8 max-w-2xl mx-auto shadow-2xl ${
+              winner 
+                ? 'bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border-yellow-400/50 shadow-yellow-500/20' 
+                : 'bg-white/10 border-white/30 shadow-white/20'
+            }`}>
+              {winner ? (
+                <>
+                  <Crown className="w-16 h-16 mx-auto mb-4 text-yellow-400 animate-pulse" />
+                  <h2 className="text-5xl font-bold text-yellow-400 mb-4 drop-shadow-lg">
+                    🏆 Champions 🏆
+                  </h2>
+                  <div className="text-4xl font-bold text-white mb-2 drop-shadow-lg">
+                    {winner.player1} & {winner.player2}
+                  </div>
+                  <p className="text-xl text-neutral-200 font-light">
+                    4inCup Winners
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Trophy className="w-16 h-16 mx-auto mb-4 text-white/50" />
+                  <h2 className="text-5xl font-bold text-white/70 mb-4 drop-shadow-lg">
+                    Tournament Winner
+                  </h2>
+                  <div className="text-8xl font-bold text-white/30 mb-2 drop-shadow-lg">
+                    ?
+                  </div>
+                  <p className="text-xl text-neutral-300 font-light">
+                    To Be Determined
+                  </p>
+                </>
+              )}
+            </div>
+          </section>
+        )}
+
         <section className="text-center py-12">
           <h1 className="text-6xl md:text-8xl font-bold text-white mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700 drop-shadow-2xl">
             4inCup
