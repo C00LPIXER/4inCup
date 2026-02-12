@@ -9,7 +9,6 @@ export function Layout({ children }) {
     const navItems = [
         { name: 'Home', path: '/', icon: Trophy },
         { name: 'Standings', path: '/standings', icon: Table },
-        { name: 'Groups', path: '/groups', icon: Users },
         { name: 'Fixtures', path: '/fixtures', icon: Calendar },
         { name: 'Settings', path: '/settings', icon: Settings },
     ];
