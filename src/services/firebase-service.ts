@@ -8,17 +8,12 @@ import {
   getDoc,
   query,
   where,
-  orderBy,
   writeBatch,
   onSnapshot,
   type Unsubscribe,
 } from "firebase/firestore";
-import {
-  ref,
-  uploadBytes,
-  getDownloadURL,
-} from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 import type {
   Player,
   Team,
@@ -47,10 +42,10 @@ export async function createChampionship(
 }
 
 export async function getChampionships(): Promise<Championship[]> {
-  const snap = await getDocs(
-    query(collection(db, "championships"), orderBy("createdAt", "desc"))
-  );
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Championship));
+  const snap = await getDocs(collection(db, "championships"));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() } as Championship))
+    .sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export async function getChampionship(id: string): Promise<Championship | null> {
@@ -85,13 +80,11 @@ export async function registerPlayer(
   name: string,
   photoFile: File
 ): Promise<string> {
-  // Upload photo
-  const storageRef = ref(
-    storage,
-    `players/${championshipId}/${Date.now()}_${photoFile.name}`
+  // Upload photo to Cloudinary
+  const photoURL = await uploadToCloudinary(
+    photoFile,
+    `4incup/${championshipId}`
   );
-  await uploadBytes(storageRef, photoFile);
-  const photoURL = await getDownloadURL(storageRef);
 
   const emptySkills: CricketSkills = {
     batting: 5,
@@ -117,11 +110,12 @@ export async function getPlayers(championshipId: string): Promise<Player[]> {
   const snap = await getDocs(
     query(
       collection(db, "players"),
-      where("championshipId", "==", championshipId),
-      orderBy("createdAt", "asc")
+      where("championshipId", "==", championshipId)
     )
   );
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Player));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() } as Player))
+    .sort((a, b) => a.createdAt - b.createdAt);
 }
 
 export function subscribePlayers(
@@ -130,11 +124,13 @@ export function subscribePlayers(
 ): Unsubscribe {
   const q = query(
     collection(db, "players"),
-    where("championshipId", "==", championshipId),
-    orderBy("createdAt", "asc")
+    where("championshipId", "==", championshipId)
   );
   return onSnapshot(q, (snap) => {
-    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Player)));
+    const players = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() } as Player))
+      .sort((a, b) => a.createdAt - b.createdAt);
+    cb(players);
   });
 }
 
@@ -175,11 +171,12 @@ export async function getTeams(championshipId: string): Promise<Team[]> {
   const snap = await getDocs(
     query(
       collection(db, "teams"),
-      where("championshipId", "==", championshipId),
-      orderBy("createdAt", "asc")
+      where("championshipId", "==", championshipId)
     )
   );
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Team));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() } as Team))
+    .sort((a, b) => a.createdAt - b.createdAt);
 }
 
 export function subscribeTeams(
@@ -188,11 +185,13 @@ export function subscribeTeams(
 ): Unsubscribe {
   const q = query(
     collection(db, "teams"),
-    where("championshipId", "==", championshipId),
-    orderBy("createdAt", "asc")
+    where("championshipId", "==", championshipId)
   );
   return onSnapshot(q, (snap) => {
-    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Team)));
+    const teams = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() } as Team))
+      .sort((a, b) => a.createdAt - b.createdAt);
+    cb(teams);
   });
 }
 
@@ -349,11 +348,12 @@ export async function getMatches(championshipId: string): Promise<Match[]> {
   const snap = await getDocs(
     query(
       collection(db, "matches"),
-      where("championshipId", "==", championshipId),
-      orderBy("matchNumber", "asc")
+      where("championshipId", "==", championshipId)
     )
   );
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Match));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() } as Match))
+    .sort((a, b) => a.matchNumber - b.matchNumber);
 }
 
 export function subscribeMatches(
@@ -362,11 +362,13 @@ export function subscribeMatches(
 ): Unsubscribe {
   const q = query(
     collection(db, "matches"),
-    where("championshipId", "==", championshipId),
-    orderBy("matchNumber", "asc")
+    where("championshipId", "==", championshipId)
   );
   return onSnapshot(q, (snap) => {
-    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Match)));
+    const matches = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() } as Match))
+      .sort((a, b) => a.matchNumber - b.matchNumber);
+    cb(matches);
   });
 }
 
