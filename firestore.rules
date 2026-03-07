@@ -1,21 +1,26 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Tournament data - allow read/write for everyone
-    match /tournaments/{tournamentId} {
+    // Championships - public read, authenticated or open write
+    match /championships/{docId} {
       allow read: if true;
       allow write: if true;
     }
-    
-    // Test tournament data - allow read/write for everyone
-    match /test_tournaments/{tournamentId} {
+
+    // Players - public read, open write (registration)
+    match /players/{docId} {
       allow read: if true;
       allow write: if true;
     }
-    
-    // Settings/auth data - allow read/write for everyone
-    match /settings/{document} {
+
+    // Teams - public read, admin write
+    match /teams/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Matches - public read, admin write
+    match /matches/{docId} {
       allow read: if true;
       allow write: if true;
     }
