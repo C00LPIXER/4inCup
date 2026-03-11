@@ -77,34 +77,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatsCard
-          icon={<Users className="h-5 w-5" />}
-          label="Players"
-          value={players.length}
-          color="text-blue-400"
-        />
-        <StatsCard
-          icon={<Shield className="h-5 w-5" />}
-          label="Teams"
-          value={teams.length}
-          color="text-primary"
-        />
-        <StatsCard
-          icon={<Calendar className="h-5 w-5" />}
-          label="Matches"
-          value={matches.length}
-          color="text-accent"
-        />
-        <StatsCard
-          icon={<BarChart3 className="h-5 w-5" />}
-          label="Completed"
-          value={completedMatches.length}
-          color="text-purple-400"
-        />
-      </div>
-
       {/* Players List */}
       <div>
         <div className="flex items-center justify-between mb-4">
