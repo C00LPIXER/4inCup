@@ -142,7 +142,7 @@ export default function RegisterPage() {
               <Label htmlFor="name">Player Name with Nickname</Label>
               <Input
                 id="name"
-                placeholder="e.g. ⁠Anas Silly"
+                placeholder="e.g. Aslam Hosur"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
