@@ -24,5 +24,35 @@ service cloud.firestore {
       allow read: if true;
       allow write: if true;
     }
+
+    // Admins - only authenticated users (both prod and test datasets)
+    match /admins/{uid} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /test_admins/{uid} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Test dataset collections (mirror of prod, open for development)
+    match /test_championships/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /test_players/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /test_teams/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /test_matches/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
   }
 }

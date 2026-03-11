@@ -9,9 +9,11 @@ import {
   Home,
   Menu,
   X,
+  LogOut,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/AuthContext";
 
 interface NavItem {
   label: string;
@@ -21,10 +23,10 @@ interface NavItem {
 
 const publicNav: NavItem[] = [
   { label: "Home", href: "/", icon: <Home className="h-4 w-4" /> },
+  { label: "Players", href: "/players", icon: <Users className="h-4 w-4" /> },
   { label: "Teams", href: "/teams", icon: <Shield className="h-4 w-4" /> },
   { label: "Fixtures", href: "/fixtures", icon: <Calendar className="h-4 w-4" /> },
   { label: "Standings", href: "/standings", icon: <BarChart3 className="h-4 w-4" /> },
-  { label: "Players", href: "/players", icon: <Users className="h-4 w-4" /> },
 ];
 
 const adminNav: NavItem[] = [
@@ -43,6 +45,7 @@ interface NavbarProps {
 export function Navbar({ isAdmin = false }: NavbarProps) {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { logout } = useAuth();
   const navItems = isAdmin ? adminNav : publicNav;
 
   return (
@@ -84,13 +87,26 @@ export function Navbar({ isAdmin = false }: NavbarProps) {
             ))}
           </div>
 
-          {/* Admin/Public toggle */}
+          {/* Admin actions / Public hides admin button */}
           <div className="hidden md:flex items-center gap-2">
-            <Link to={isAdmin ? "/" : "/admin"}>
-              <Button variant="outline" size="sm">
-                {isAdmin ? "View Public Site" : "Admin Panel"}
-              </Button>
-            </Link>
+            {isAdmin && (
+              <>
+                <Link to="/">
+                  <Button variant="outline" size="sm">
+                    View Public Site
+                  </Button>
+                </Link>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={logout}
+                  className="gap-1.5 text-muted-foreground hover:text-destructive"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Logout
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -128,15 +144,31 @@ export function Navbar({ isAdmin = false }: NavbarProps) {
                   {item.label}
                 </Link>
               ))}
-              <Link
-                to={isAdmin ? "/" : "/admin"}
-                onClick={() => setMobileOpen(false)}
-                className="mt-2"
-              >
-                <Button variant="outline" size="sm" className="w-full">
-                  {isAdmin ? "View Public Site" : "Admin Panel"}
-                </Button>
-              </Link>
+              {isAdmin && (
+                <>
+                  <Link
+                    to="/"
+                    onClick={() => setMobileOpen(false)}
+                    className="mt-2"
+                  >
+                    <Button variant="outline" size="sm" className="w-full">
+                      View Public Site
+                    </Button>
+                  </Link>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full gap-1.5 text-muted-foreground hover:text-destructive mt-1"
+                    onClick={() => {
+                      setMobileOpen(false);
+                      logout();
+                    }}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         )}

@@ -13,6 +13,7 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { col } from "@/lib/firebase";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import type {
   Player,
@@ -34,7 +35,7 @@ import type {
 export async function createChampionship(
   data: Omit<Championship, "id" | "createdAt">
 ): Promise<string> {
-  const docRef = await addDoc(collection(db, "championships"), {
+  const docRef = await addDoc(collection(db, col("championships")), {
     ...data,
     createdAt: Date.now(),
   });
@@ -42,14 +43,14 @@ export async function createChampionship(
 }
 
 export async function getChampionships(): Promise<Championship[]> {
-  const snap = await getDocs(collection(db, "championships"));
+  const snap = await getDocs(collection(db, col("championships")));
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() } as Championship))
     .sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export async function getChampionship(id: string): Promise<Championship | null> {
-  const snap = await getDoc(doc(db, "championships", id));
+  const snap = await getDoc(doc(db, col("championships"), id));
   if (!snap.exists()) return null;
   return { id: snap.id, ...snap.data() } as Championship;
 }
@@ -58,14 +59,14 @@ export async function updateChampionship(
   id: string,
   data: Partial<Championship>
 ): Promise<void> {
-  await updateDoc(doc(db, "championships", id), data);
+  await updateDoc(doc(db, col("championships"), id), data);
 }
 
 export function subscribeChampionship(
   id: string,
   cb: (c: Championship | null) => void
 ): Unsubscribe {
-  return onSnapshot(doc(db, "championships", id), (snap) => {
+  return onSnapshot(doc(db, col("championships"), id), (snap) => {
     if (!snap.exists()) return cb(null);
     cb({ id: snap.id, ...snap.data() } as Championship);
   });
@@ -94,7 +95,7 @@ export async function registerPlayer(
     experience: 5,
   };
 
-  const docRef = await addDoc(collection(db, "players"), {
+  const docRef = await addDoc(collection(db, col("players")), {
     name,
     photoURL,
     role: "",
@@ -109,7 +110,7 @@ export async function registerPlayer(
 export async function getPlayers(championshipId: string): Promise<Player[]> {
   const snap = await getDocs(
     query(
-      collection(db, "players"),
+      collection(db, col("players")),
       where("championshipId", "==", championshipId)
     )
   );
@@ -123,7 +124,7 @@ export function subscribePlayers(
   cb: (players: Player[]) => void
 ): Unsubscribe {
   const q = query(
-    collection(db, "players"),
+    collection(db, col("players")),
     where("championshipId", "==", championshipId)
   );
   return onSnapshot(q, (snap) => {
@@ -138,11 +139,11 @@ export async function updatePlayer(
   id: string,
   data: Partial<Player>
 ): Promise<void> {
-  await updateDoc(doc(db, "players", id), data);
+  await updateDoc(doc(db, col("players"), id), data);
 }
 
 export async function deletePlayer(id: string): Promise<void> {
-  await deleteDoc(doc(db, "players", id));
+  await deleteDoc(doc(db, col("players"), id));
 }
 
 export async function assignRole(
@@ -150,7 +151,7 @@ export async function assignRole(
   role: CricketRole,
   skills: CricketSkills
 ): Promise<void> {
-  await updateDoc(doc(db, "players", playerId), { role, skills });
+  await updateDoc(doc(db, col("players"), playerId), { role, skills });
 }
 
 // ============================================================
@@ -160,7 +161,7 @@ export async function assignRole(
 export async function createTeam(
   data: Omit<Team, "id" | "createdAt">
 ): Promise<string> {
-  const docRef = await addDoc(collection(db, "teams"), {
+  const docRef = await addDoc(collection(db, col("teams")), {
     ...data,
     createdAt: Date.now(),
   });
@@ -170,7 +171,7 @@ export async function createTeam(
 export async function getTeams(championshipId: string): Promise<Team[]> {
   const snap = await getDocs(
     query(
-      collection(db, "teams"),
+      collection(db, col("teams")),
       where("championshipId", "==", championshipId)
     )
   );
@@ -184,7 +185,7 @@ export function subscribeTeams(
   cb: (teams: Team[]) => void
 ): Unsubscribe {
   const q = query(
-    collection(db, "teams"),
+    collection(db, col("teams")),
     where("championshipId", "==", championshipId)
   );
   return onSnapshot(q, (snap) => {
@@ -199,11 +200,11 @@ export async function updateTeam(
   id: string,
   data: Partial<Team>
 ): Promise<void> {
-  await updateDoc(doc(db, "teams", id), data);
+  await updateDoc(doc(db, col("teams"), id), data);
 }
 
 export async function deleteTeam(id: string): Promise<void> {
-  await deleteDoc(doc(db, "teams", id));
+  await deleteDoc(doc(db, col("teams"), id));
 }
 
 /** Shuffle players into balanced teams and persist */
@@ -218,13 +219,13 @@ export async function shuffleTeams(
 
   // Delete existing teams
   const batch1 = writeBatch(db);
-  existingTeams.forEach((t) => batch1.delete(doc(db, "teams", t.id)));
+  existingTeams.forEach((t) => batch1.delete(doc(db, col("teams"), t.id)));
   await batch1.commit();
 
   // Reset player teamIds
   const batch2 = writeBatch(db);
   players.forEach((p) =>
-    batch2.update(doc(db, "players", p.id), { teamId: "" })
+    batch2.update(doc(db, col("players"), p.id), { teamId: "" })
   );
   await batch2.commit();
 
@@ -297,7 +298,7 @@ export async function shuffleTeams(
 
     const batch = writeBatch(db);
     teamBuckets[i].forEach((p) =>
-      batch.update(doc(db, "players", p.id), { teamId })
+      batch.update(doc(db, col("players"), p.id), { teamId })
     );
     await batch.commit();
   }
@@ -310,8 +311,8 @@ export async function movePlayer(
   toTeamId: string
 ): Promise<void> {
   const [fromSnap, toSnap] = await Promise.all([
-    getDoc(doc(db, "teams", fromTeamId)),
-    getDoc(doc(db, "teams", toTeamId)),
+    getDoc(doc(db, col("teams"), fromTeamId)),
+    getDoc(doc(db, col("teams"), toTeamId)),
   ]);
 
   if (!fromSnap.exists() || !toSnap.exists()) return;
@@ -320,13 +321,13 @@ export async function movePlayer(
   const toTeam = toSnap.data() as Team;
 
   const batch = writeBatch(db);
-  batch.update(doc(db, "teams", fromTeamId), {
+  batch.update(doc(db, col("teams"), fromTeamId), {
     playerIds: fromTeam.playerIds.filter((id) => id !== playerId),
   });
-  batch.update(doc(db, "teams", toTeamId), {
+  batch.update(doc(db, col("teams"), toTeamId), {
     playerIds: [...toTeam.playerIds, playerId],
   });
-  batch.update(doc(db, "players", playerId), { teamId: toTeamId });
+  batch.update(doc(db, col("players"), playerId), { teamId: toTeamId });
   await batch.commit();
 }
 
@@ -337,7 +338,7 @@ export async function movePlayer(
 export async function createMatch(
   data: Omit<Match, "id" | "createdAt">
 ): Promise<string> {
-  const docRef = await addDoc(collection(db, "matches"), {
+  const docRef = await addDoc(collection(db, col("matches")), {
     ...data,
     createdAt: Date.now(),
   });
@@ -347,7 +348,7 @@ export async function createMatch(
 export async function getMatches(championshipId: string): Promise<Match[]> {
   const snap = await getDocs(
     query(
-      collection(db, "matches"),
+      collection(db, col("matches")),
       where("championshipId", "==", championshipId)
     )
   );
@@ -361,7 +362,7 @@ export function subscribeMatches(
   cb: (matches: Match[]) => void
 ): Unsubscribe {
   const q = query(
-    collection(db, "matches"),
+    collection(db, col("matches")),
     where("championshipId", "==", championshipId)
   );
   return onSnapshot(q, (snap) => {
@@ -376,7 +377,7 @@ export async function updateMatch(
   id: string,
   data: Partial<Match>
 ): Promise<void> {
-  await updateDoc(doc(db, "matches", id), data);
+  await updateDoc(doc(db, col("matches"), id), data);
 }
 
 export async function updateMatchScore(
@@ -386,7 +387,7 @@ export async function updateMatchScore(
   result: MatchResult,
   status: MatchStatus = "completed"
 ): Promise<void> {
-  await updateDoc(doc(db, "matches", matchId), {
+  await updateDoc(doc(db, col("matches"), matchId), {
     team1Score,
     team2Score,
     result,
@@ -401,7 +402,7 @@ export async function generateFixtures(
   // Delete existing matches
   const existing = await getMatches(championshipId);
   const batch = writeBatch(db);
-  existing.forEach((m) => batch.delete(doc(db, "matches", m.id)));
+  existing.forEach((m) => batch.delete(doc(db, col("matches"), m.id)));
   await batch.commit();
 
   const teams = await getTeams(championshipId);
