@@ -113,3 +113,12 @@ export const TEAM_DEFAULT_NAMES = [
   "Golden Eagles",
   "Storm Riders",
 ];
+
+// ---------- Admin User ----------
+export interface AdminUser {
+  uid: string;
+  username: string;
+  email: string;
+  role: string;
+  createdAt: number;
+}

@@ -1,13 +1,7 @@
 import { Link } from "react-router-dom";
 import { useTournament } from "@/context/TournamentContext";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Trophy,
@@ -17,6 +11,7 @@ import {
   Shield,
   ArrowRight,
   Sparkles,
+  UserCircle2,
 } from "lucide-react";
 import { PageLoader } from "@/components/ui/spinner";
 
@@ -110,26 +105,83 @@ export default function HomePage() {
         />
       </div>
 
-      {/* Quick Links */}
-      <div className="grid md:grid-cols-3 gap-4">
-        <QuickLink
-          to="/fixtures"
-          icon={<Calendar className="h-6 w-6" />}
-          title="Match Fixtures"
-          description="View upcoming and completed matches"
-        />
-        <QuickLink
-          to="/standings"
-          icon={<BarChart3 className="h-6 w-6" />}
-          title="Points Table"
-          description="Check team standings and net run rate"
-        />
-        <QuickLink
-          to="/players"
-          icon={<Users className="h-6 w-6" />}
-          title="Player Directory"
-          description="Browse all registered players"
-        />
+      {/* Players List */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-heading text-xl font-bold flex items-center gap-2">
+            <Users className="h-5 w-5 text-primary" />
+            Registered Players
+            <Badge variant="secondary" className="text-xs">{players.length}</Badge>
+          </h2>
+          <Link to="/players">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary gap-1">
+              View All <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
+          </Link>
+        </div>
+
+        {players.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center text-muted-foreground">
+              <Users className="h-10 w-10 mx-auto mb-2 opacity-40" />
+              <p className="text-sm">No players registered yet.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {players.map((player, i) => {
+              const team = teams.find((t) => t.id === player.teamId);
+              return (
+                <div
+                  key={player.id}
+                  className="animate-slide-up opacity-0"
+                  style={{ animationDelay: `${i * 60}ms`, animationFillMode: "forwards" }}
+                >
+                  <Card className="overflow-hidden transition-all duration-300 hover:border-primary/50 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10 group">
+                    <CardContent className="p-0">
+                      {/* Photo */}
+                      <div className="relative aspect-square bg-secondary/50 overflow-hidden">
+                        {player.photoURL ? (
+                          <img
+                            src={player.photoURL}
+                            alt={player.name}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <UserCircle2 className="h-12 w-12 text-muted-foreground/40" />
+                          </div>
+                        )}
+                        {team && (
+                          <div
+                            className="absolute bottom-0 left-0 right-0 h-1"
+                            style={{ backgroundColor: team.color }}
+                          />
+                        )}
+                      </div>
+                      {/* Info */}
+                      <div className="p-2.5">
+                        <p className="text-sm font-semibold truncate leading-tight">{player.name}</p>
+                        <div className="flex items-center justify-between mt-1 gap-1">
+                          {player.role ? (
+                            <Badge variant="secondary" className="text-[9px] px-1.5 py-0 leading-none">
+                              {player.role}
+                            </Badge>
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground">Unassigned</span>
+                          )}
+                          {team && (
+                            <span className="text-[9px] text-muted-foreground truncate">{team.name}</span>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -154,31 +206,5 @@ function StatsCard({
         <p className="text-xs text-muted-foreground">{label}</p>
       </CardContent>
     </Card>
-  );
-}
-
-function QuickLink({
-  to,
-  icon,
-  title,
-  description,
-}: {
-  to: string;
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}) {
-  return (
-    <Link to={to}>
-      <Card className="h-full transition-all hover:border-primary/50 hover:shadow-primary/10 hover:shadow-xl cursor-pointer group">
-        <CardHeader>
-          <div className="text-primary mb-2 transition-transform group-hover:scale-110">
-            {icon}
-          </div>
-          <CardTitle className="text-lg">{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
-        </CardHeader>
-      </Card>
-    </Link>
   );
 }

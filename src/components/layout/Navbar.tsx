@@ -10,6 +10,7 @@ import {
   Menu,
   X,
   LogOut,
+  UserCog,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ const adminNav: NavItem[] = [
   { label: "Teams", href: "/admin/teams", icon: <Shield className="h-4 w-4" /> },
   { label: "Matches", href: "/admin/matches", icon: <Calendar className="h-4 w-4" /> },
   { label: "Standings", href: "/admin/standings", icon: <BarChart3 className="h-4 w-4" /> },
+  { label: "Users", href: "/admin/users", icon: <UserCog className="h-4 w-4" /> },
 ];
 
 interface NavbarProps {

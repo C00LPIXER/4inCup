@@ -26,6 +26,7 @@ import type {
   MatchResult,
   PointsTableRow,
   MatchStatus,
+  AdminUser,
 } from "@/types";
 
 // ============================================================
@@ -524,5 +525,79 @@ export function calculatePointsTable(
   return Object.values(table).sort((a, b) => {
     if (b.points !== a.points) return b.points - a.points;
     return b.nrr - a.nrr;
+  });
+}
+
+// ============================================================
+// Extra Match Operations
+// ============================================================
+
+export async function deleteMatch(id: string): Promise<void> {
+  await deleteDoc(doc(db, col("matches"), id));
+}
+
+export async function resetMatchScore(id: string): Promise<void> {
+  await updateDoc(doc(db, col("matches"), id), {
+    status: "upcoming",
+    team1Score: null,
+    team2Score: null,
+    result: null,
+  });
+}
+
+// ============================================================
+// Manual Player Creation (no photo upload)
+// ============================================================
+
+export async function createManualPlayer(
+  championshipId: string,
+  name: string,
+  photoURL = ""
+): Promise<string> {
+  const emptySkills: CricketSkills = {
+    batting: 5,
+    bowling: 5,
+    fielding: 5,
+    keeping: 5,
+    experience: 5,
+  };
+  const docRef = await addDoc(collection(db, col("players")), {
+    name: name.trim(),
+    photoURL,
+    role: "",
+    skills: emptySkills,
+    teamId: "",
+    championshipId,
+    createdAt: Date.now(),
+  });
+  return docRef.id;
+}
+
+// ============================================================
+// Championship Delete
+// ============================================================
+
+export async function deleteChampionship(id: string): Promise<void> {
+  await deleteDoc(doc(db, col("championships"), id));
+}
+
+// ============================================================
+// Admin User Management (Firestore admins collection)
+// ============================================================
+
+export async function getAdmins(): Promise<AdminUser[]> {
+  const snap = await getDocs(collection(db, col("admins")));
+  return snap.docs.map((d) => ({ ...d.data() } as AdminUser));
+}
+
+export async function removeAdmin(uid: string): Promise<void> {
+  await deleteDoc(doc(db, col("admins"), uid));
+}
+
+export async function upsertAdmin(admin: AdminUser): Promise<void> {
+  await updateDoc(doc(db, col("admins"), admin.uid), {
+    username: admin.username,
+    email: admin.email,
+    role: admin.role,
   });
 }
