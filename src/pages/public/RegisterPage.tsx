@@ -139,10 +139,10 @@ export default function RegisterPage() {
 
             {/* Name */}
             <div className="space-y-2">
-              <Label htmlFor="name">Player Name</Label>
+              <Label htmlFor="name">Player Name with Nickname</Label>
               <Input
                 id="name"
-                placeholder="Enter your full name"
+                placeholder="e.g. ⁠Anas Silly"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
