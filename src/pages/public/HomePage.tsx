@@ -43,33 +43,44 @@ export default function HomePage() {
   return (
     <div className="space-y-8">
       {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 via-card to-accent/10 border border-border p-8 md:p-12">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
-        <div className="relative z-10">
-          <Badge className="mb-4 bg-primary/20 text-primary border-primary/30">
+      <div className="relative overflow-hidden rounded-2xl border border-border min-h-[340px] md:min-h-[420px] flex items-end p-8 md:p-12">
+        {/* Background image */}
+        <img
+          src="/bg-image.jpg"
+          alt="Stadium"
+          className="absolute inset-0 w-full h-full object-cover object-center scale-105"
+          style={{ filter: "brightness(0.55)" }}
+        />
+        {/* Gradient overlays */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-transparent" />
+
+        {/* Content */}
+        <div className="relative z-10 w-full">
+          <Badge className="mb-4 bg-white/10 text-white border-white/20 backdrop-blur-sm">
             <Sparkles className="h-3 w-3 mr-1" />
             Season {activeChampionship.season}
           </Badge>
-          <h1 className="font-heading text-4xl md:text-6xl font-bold mb-3 tracking-wide">
+          <h1 className="font-heading text-4xl md:text-6xl font-bold mb-3 tracking-wide text-white drop-shadow-lg">
             {activeChampionship.name}
           </h1>
-          <p className="text-muted-foreground text-lg mb-6">
+          <p className="text-white/70 text-lg mb-6 drop-shadow">
             Organized by{" "}
-            <span className="text-accent font-semibold">
+            <span className="text-amber-300 font-semibold">
               {activeChampionship.organizer}
             </span>
           </p>
           <div className="flex flex-wrap gap-3">
             {activeChampionship.registrationOpen && (
               <Link to={`/register/${activeChampionship.id}`}>
-                <Button size="lg" className="glow-pulse">
+                <Button size="lg" className="glow-pulse shadow-lg">
                   Register Now
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
             )}
             <Link to="/teams">
-              <Button variant="outline" size="lg">
+              <Button variant="outline" size="lg" className="bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm">
                 View Teams
               </Button>
             </Link>
