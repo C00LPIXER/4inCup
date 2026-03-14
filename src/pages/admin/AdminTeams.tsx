@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState, useRef } from "react";
 import { useTournament } from "@/context/TournamentContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,16 +13,23 @@ import {
 } from "@/components/ui/select";
 import { PageLoader, Spinner } from "@/components/ui/spinner";
 import {
-  shuffleTeams, updateTeam, deleteTeam, movePlayer, createTeam,
+  shuffleTeams, updateTeam, deleteTeam, movePlayer, createTeam, updatePlayer,
 } from "@/services/firebase-service";
 import { TEAM_DEFAULT_NAMES, TEAM_COLORS, type Player, type Team } from "@/types";
-import { Shuffle, Edit3, Users, ArrowRightLeft, Shield, Plus, Trash2, Palette, UserCircle2 } from "lucide-react";
+import { Shuffle, Edit3, Users, ArrowRightLeft, Shield, Plus, Trash2, Palette, UserCircle2, GripVertical } from "lucide-react";
 
 const PRESET_COLORS = [
   "#ef4444", "#f97316", "#f59e0b", "#22c55e",
   "#14b8a6", "#3b82f6", "#8b5cf6", "#ec4899",
   "#64748b", "#a16207",
 ];
+
+const UNASSIGNED_ZONE = "__unassigned__";
+
+interface DragState {
+  playerId: string;
+  fromTeamId: string; // "" = unassigned
+}
 
 export default function AdminTeams() {
   const { players, teams, activeChampionship, loading } = useTournament();
@@ -33,7 +40,7 @@ export default function AdminTeams() {
   // Edit team dialog
   const [editTeam, setEditTeam] = useState<{ id: string; name: string; color: string } | null>(null);
 
-  // Move player dialog
+  // Move player dialog (kept as fallback)
   const [moveState, setMoveState] = useState<{ player: Player; fromTeamId: string } | null>(null);
   const [targetTeamId, setTargetTeamId] = useState("");
 
@@ -45,10 +52,16 @@ export default function AdminTeams() {
   // Delete confirm
   const [deletingTeam, setDeletingTeam] = useState<string | null>(null);
 
+  // â”€â”€ Drag & Drop state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const [dragging, setDragging] = useState<DragState | null>(null);
+  const [dragOverZone, setDragOverZone] = useState<string | null>(null); // teamId or UNASSIGNED_ZONE
+  const dragCounters = useRef<Record<string, number>>({});   // per-zone enter counter to avoid flicker
+
   if (loading) return <PageLoader />;
 
   const unassignedPlayers = players.filter((p) => !p.teamId);
 
+  // â”€â”€ Shuffle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleShuffle = async () => {
     if (!activeChampionship) return;
     if (teams.length > 0 && !confirm("Re-shuffle all teams? Existing assignments will be lost.")) return;
@@ -59,6 +72,7 @@ export default function AdminTeams() {
     finally { setShuffling(false); }
   };
 
+  // â”€â”€ Edit team â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleEditSave = async () => {
     if (!editTeam || !editTeam.name.trim()) return;
     setSaving(true);
@@ -67,15 +81,26 @@ export default function AdminTeams() {
     setSaving(false);
   };
 
+  // â”€â”€ Move player dialog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleMove = async () => {
     if (!moveState || !targetTeamId) return;
     setSaving(true);
-    await movePlayer(moveState.player.id, moveState.fromTeamId, targetTeamId);
+    if (moveState.fromTeamId) {
+      await movePlayer(moveState.player.id, moveState.fromTeamId, targetTeamId);
+    } else {
+      // unassigned â†’ team
+      await updatePlayer(moveState.player.id, { teamId: targetTeamId });
+      const toTeam = teams.find((t) => t.id === targetTeamId);
+      if (toTeam) {
+        await updateTeam(toTeam.id, { playerIds: [...toTeam.playerIds, moveState.player.id] });
+      }
+    }
     setMoveState(null);
     setTargetTeamId("");
     setSaving(false);
   };
 
+  // â”€â”€ Create team â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleCreate = async () => {
     if (!activeChampionship || !createName.trim()) return;
     setSaving(true);
@@ -85,26 +110,98 @@ export default function AdminTeams() {
     setSaving(false);
   };
 
+  // â”€â”€ Delete team â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleDelete = async (teamId: string, teamName: string) => {
     if (!confirm(`Delete team "${teamName}"? Players will become unassigned.`)) return;
     setDeletingTeam(teamId);
-    // Unassign all players in this team
     const teamPlayers = players.filter((p) => p.teamId === teamId);
-    await Promise.all(teamPlayers.map((p) => import("@/services/firebase-service").then(({ updatePlayer }) => updatePlayer(p.id, { teamId: "" }))));
+    await Promise.all(teamPlayers.map((p) => updatePlayer(p.id, { teamId: "" })));
     await deleteTeam(teamId);
     setDeletingTeam(null);
   };
 
+  // â”€â”€ Remove player from team â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleRemoveFromTeam = async (player: Player) => {
-    await import("@/services/firebase-service").then(({ updatePlayer }) =>
-      updatePlayer(player.id, { teamId: "" })
-    );
-    // also update the team's playerIds
+    await updatePlayer(player.id, { teamId: "" });
     const team = teams.find((t) => t.id === player.teamId);
     if (team) {
       await updateTeam(team.id, { playerIds: team.playerIds.filter((id) => id !== player.id) });
     }
   };
+
+  // â”€â”€ Drag & Drop handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const onDragStart = (e: React.DragEvent, player: Player, fromTeamId: string) => {
+    setDragging({ playerId: player.id, fromTeamId });
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", player.id);
+  };
+
+  const onDragEnd = () => {
+    setDragging(null);
+    setDragOverZone(null);
+    dragCounters.current = {};
+  };
+
+  const onDragEnter = (e: React.DragEvent, zoneId: string) => {
+    e.preventDefault();
+    dragCounters.current[zoneId] = (dragCounters.current[zoneId] ?? 0) + 1;
+    setDragOverZone(zoneId);
+  };
+
+  const onDragLeave = (e: React.DragEvent, zoneId: string) => {
+    e.preventDefault();
+    dragCounters.current[zoneId] = (dragCounters.current[zoneId] ?? 1) - 1;
+    if (dragCounters.current[zoneId] <= 0) {
+      dragCounters.current[zoneId] = 0;
+      setDragOverZone((prev) => (prev === zoneId ? null : prev));
+    }
+  };
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const onDrop = async (e: React.DragEvent, toZoneId: string) => {
+    e.preventDefault();
+    setDragOverZone(null);
+    dragCounters.current = {};
+    if (!dragging) return;
+
+    const { playerId, fromTeamId } = dragging;
+    setDragging(null);
+
+    // Same zone â€” nothing to do
+    if ((toZoneId === UNASSIGNED_ZONE && !fromTeamId) || toZoneId === fromTeamId) return;
+
+    const player = players.find((p) => p.id === playerId);
+    if (!player) return;
+
+    setSaving(true);
+    try {
+      if (toZoneId === UNASSIGNED_ZONE) {
+        // â†’ unassigned
+        await handleRemoveFromTeam(player);
+      } else if (!fromTeamId) {
+        // unassigned â†’ team
+        await updatePlayer(playerId, { teamId: toZoneId });
+        const toTeam = teams.find((t) => t.id === toZoneId);
+        if (toTeam) {
+          await updateTeam(toTeam.id, { playerIds: [...toTeam.playerIds, playerId] });
+        }
+      } else {
+        // team â†’ team
+        await movePlayer(playerId, fromTeamId, toZoneId);
+      }
+    } catch (err) {
+      console.error("Drop error:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // â”€â”€ Derived â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const draggedPlayer = dragging ? players.find((p) => p.id === dragging.playerId) : null;
 
   return (
     <div className="space-y-6">
@@ -112,14 +209,16 @@ export default function AdminTeams() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="font-heading text-3xl font-bold">Manage Teams</h1>
-          <p className="text-muted-foreground">{teams.length} teams • {players.length} players</p>
+          <p className="text-muted-foreground">{teams.length} teams â€¢ {players.length} players
+            {saving && <span className="ml-2 text-xs text-muted-foreground">savingâ€¦</span>}
+          </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" onClick={() => setShowCreate(true)}>
             <Plus className="h-4 w-4 mr-1" /> New Team
           </Button>
           <Button onClick={handleShuffle} disabled={shuffling || players.length < 4} size="lg" className="glow-pulse">
-            {shuffling ? <><Spinner size="sm" className="mr-2 text-primary-foreground" />Shuffling…</> : <><Shuffle className="h-4 w-4 mr-2" />Auto-Split Teams</>}
+            {shuffling ? <><Spinner size="sm" className="mr-2 text-primary-foreground" />Shufflingâ€¦</> : <><Shuffle className="h-4 w-4 mr-2" />Auto-Split Teams</>}
           </Button>
         </div>
       </div>
@@ -132,19 +231,57 @@ export default function AdminTeams() {
         </Card>
       )}
 
-      {/* Unassigned Players */}
-      {unassignedPlayers.length > 0 && (
-        <Card className="border-destructive/30">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Users className="h-4 w-4 text-destructive" />
-              Unassigned Players ({unassignedPlayers.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
+      {/* Drag hint */}
+      {teams.length > 0 && (
+        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+          <GripVertical className="h-3.5 w-3.5" />
+          Drag players between teams or drop into Unassigned
+        </p>
+      )}
+
+      {/* Unassigned Players â€” also a drop zone */}
+      <Card
+        className={`transition-all duration-150 ${
+          dragOverZone === UNASSIGNED_ZONE
+            ? "border-destructive ring-2 ring-destructive/40 bg-destructive/5"
+            : unassignedPlayers.length > 0
+            ? "border-destructive/30"
+            : dragging
+            ? "border-dashed border-border/60"
+            : "border-transparent"
+        }`}
+        onDragEnter={(e) => onDragEnter(e, UNASSIGNED_ZONE)}
+        onDragLeave={(e) => onDragLeave(e, UNASSIGNED_ZONE)}
+        onDragOver={onDragOver}
+        onDrop={(e) => onDrop(e, UNASSIGNED_ZONE)}
+      >
+        <CardHeader className="pb-2 pt-4">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Users className="h-4 w-4 text-destructive" />
+            Unassigned Players ({unassignedPlayers.length})
+            {dragOverZone === UNASSIGNED_ZONE && (
+              <Badge className="ml-auto text-xs bg-destructive/20 text-destructive border-destructive/30 animate-pulse">
+                Drop here to unassign
+              </Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {unassignedPlayers.length === 0 && !dragging ? (
+            <p className="text-xs text-muted-foreground text-center py-2">No unassigned players.</p>
+          ) : (
+            <div className={`flex flex-wrap gap-2 min-h-[40px] rounded-lg transition-colors ${dragOverZone === UNASSIGNED_ZONE ? "bg-destructive/5" : ""}`}>
               {unassignedPlayers.map((p) => (
-                <div key={p.id} className="flex items-center gap-2 bg-secondary rounded-full px-3 py-1.5">
+                <div
+                  key={p.id}
+                  draggable
+                  onDragStart={(e) => onDragStart(e, p, "")}
+                  onDragEnd={onDragEnd}
+                  className={`flex items-center gap-2 bg-secondary rounded-full px-3 py-1.5 cursor-grab active:cursor-grabbing select-none transition-opacity ${
+                    dragging?.playerId === p.id ? "opacity-40 scale-95" : "hover:bg-secondary/80"
+                  }`}
+                >
+                  <GripVertical className="h-3 w-3 text-muted-foreground/50 flex-shrink-0" />
                   {p.photoURL ? (
                     <img src={p.photoURL} alt={p.name} className="h-6 w-6 rounded-full object-cover" />
                   ) : (
@@ -153,10 +290,15 @@ export default function AdminTeams() {
                   <span className="text-sm">{p.name}</span>
                 </div>
               ))}
+              {dragging && dragging.fromTeamId !== "" && (
+                <div className="flex items-center gap-2 border-2 border-dashed border-destructive/40 rounded-full px-3 py-1.5 text-xs text-destructive/60">
+                  Drop to unassign
+                </div>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
 
       {/* Teams Grid */}
       {teams.length === 0 ? (
@@ -172,16 +314,37 @@ export default function AdminTeams() {
             const avgSkill = teamPlayers.length
               ? Math.round(teamPlayers.reduce((s, p) => s + (p.skills.batting + p.skills.bowling + p.skills.fielding + p.skills.experience) / 4, 0) / teamPlayers.length)
               : 0;
+            const isOver = dragOverZone === team.id;
+            const isSameTeam = dragging?.fromTeamId === team.id;
 
             return (
-              <Card key={team.id} className="overflow-hidden">
+              <Card
+                key={team.id}
+                className={`overflow-hidden transition-all duration-150 ${
+                  isOver && !isSameTeam
+                    ? "ring-2 shadow-lg"
+                    : dragging && !isSameTeam
+                    ? "border-dashed border-border/60"
+                    : ""
+                }`}
+                style={isOver && !isSameTeam ? { boxShadow: `0 0 0 2px ${team.color}55` } : undefined}
+                onDragEnter={(e) => onDragEnter(e, team.id)}
+                onDragLeave={(e) => onDragLeave(e, team.id)}
+                onDragOver={onDragOver}
+                onDrop={(e) => onDrop(e, team.id)}
+              >
                 <div className="h-1.5" style={{ backgroundColor: team.color }} />
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <div className="h-4 w-4 rounded-full flex-shrink-0" style={{ backgroundColor: team.color }} />
                     <CardTitle className="text-lg">{team.name}</CardTitle>
                     <Badge variant="secondary" className="text-xs">{teamPlayers.length} players</Badge>
                     {avgSkill > 0 && <Badge variant="outline" className="text-[10px]">Avg {avgSkill}/10</Badge>}
+                    {isOver && !isSameTeam && draggedPlayer && (
+                      <Badge className="text-xs animate-pulse" style={{ backgroundColor: `${team.color}30`, color: team.color, borderColor: `${team.color}50` }}>
+                        + {draggedPlayer.name}
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
                     <Button variant="ghost" size="icon" onClick={() => setEditTeam({ id: team.id, name: team.name, color: team.color })} title="Edit Team">
@@ -193,35 +356,77 @@ export default function AdminTeams() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {teamPlayers.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">No players in this team.</p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {teamPlayers.map((p) => (
-                        <div key={p.id} className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-secondary/50 transition-colors group">
-                          {p.photoURL ? (
-                            <img src={p.photoURL} alt={p.name} className="h-7 w-7 rounded-full object-cover border border-border flex-shrink-0" />
-                          ) : (
-                            <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                              <UserCircle2 className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{p.name}</p>
-                            {p.role && <p className="text-[10px] text-muted-foreground">{p.role}</p>}
+                  <div
+                    className={`space-y-1.5 min-h-[48px] rounded-lg transition-colors ${
+                      isOver && !isSameTeam ? "bg-primary/5" : ""
+                    }`}
+                  >
+                    {teamPlayers.length === 0 && !isOver && (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        {dragging ? "Drop player here" : "No players in this team."}
+                      </p>
+                    )}
+                    {teamPlayers.map((p) => (
+                      <div
+                        key={p.id}
+                        draggable
+                        onDragStart={(e) => onDragStart(e, p, team.id)}
+                        onDragEnd={onDragEnd}
+                        className={`flex items-center gap-3 px-2 py-1.5 rounded-lg transition-all group select-none cursor-grab active:cursor-grabbing ${
+                          dragging?.playerId === p.id
+                            ? "opacity-40 scale-95 bg-secondary/30"
+                            : "hover:bg-secondary/50"
+                        }`}
+                      >
+                        <GripVertical className="h-4 w-4 text-muted-foreground/30 group-hover:text-muted-foreground/60 flex-shrink-0 transition-colors" />
+                        {p.photoURL ? (
+                          <img src={p.photoURL} alt={p.name} className="h-7 w-7 rounded-full object-cover border border-border flex-shrink-0" />
+                        ) : (
+                          <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                            <UserCircle2 className="h-4 w-4 text-muted-foreground" />
                           </div>
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setMoveState({ player: p, fromTeamId: team.id }); setTargetTeamId(""); }} title="Move to another team">
-                              <ArrowRightLeft className="h-3 w-3" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleRemoveFromTeam(p)} title="Remove from team">
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{p.name}</p>
+                          {p.role && <p className="text-[10px] text-muted-foreground">{p.role}</p>}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost" size="icon" className="h-7 w-7"
+                            onClick={() => { setMoveState({ player: p, fromTeamId: team.id }); setTargetTeamId(""); }}
+                            title="Move to another team"
+                          >
+                            <ArrowRightLeft className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={() => handleRemoveFromTeam(p)}
+                            title="Remove from team"
+                          >
+                            <XIcon className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    {/* Ghost drop target row */}
+                    {isOver && !isSameTeam && draggedPlayer && (
+                      <div className="flex items-center gap-3 px-2 py-1.5 rounded-lg border-2 border-dashed opacity-60 pointer-events-none"
+                        style={{ borderColor: team.color }}>
+                        <GripVertical className="h-4 w-4 text-muted-foreground/30 flex-shrink-0" />
+                        {draggedPlayer.photoURL ? (
+                          <img src={draggedPlayer.photoURL} alt={draggedPlayer.name} className="h-7 w-7 rounded-full object-cover border border-border flex-shrink-0" />
+                        ) : (
+                          <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                            <UserCircle2 className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{draggedPlayer.name}</p>
+                          {draggedPlayer.role && <p className="text-[10px] text-muted-foreground">{draggedPlayer.role}</p>}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             );
@@ -257,7 +462,7 @@ export default function AdminTeams() {
             <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
             <Button onClick={handleCreate} disabled={saving || !createName.trim()}>
               {saving && <Spinner size="sm" className="mr-2 text-primary-foreground" />}
-              {saving ? "Creating…" : "Create Team"}
+              {saving ? "Creatingâ€¦" : "Create Team"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -297,13 +502,13 @@ export default function AdminTeams() {
             <Button variant="outline" onClick={() => setEditTeam(null)}>Cancel</Button>
             <Button onClick={handleEditSave} disabled={saving || !editTeam?.name.trim()}>
               {saving && <Spinner size="sm" className="mr-2 text-primary-foreground" />}
-              {saving ? "Saving…" : "Save Changes"}
+              {saving ? "Savingâ€¦" : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Move Player Dialog */}
+      {/* Move Player Dialog (fallback via ArrowRightLeft button) */}
       <Dialog open={!!moveState} onOpenChange={() => setMoveState(null)}>
         <DialogContent>
           <DialogHeader>
@@ -313,7 +518,7 @@ export default function AdminTeams() {
           <div className="space-y-2">
             <Label>Destination Team</Label>
             <Select value={targetTeamId} onValueChange={setTargetTeamId}>
-              <SelectTrigger><SelectValue placeholder="Select team…" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select teamâ€¦" /></SelectTrigger>
               <SelectContent>
                 {teams.filter((t) => t.id !== moveState?.fromTeamId).map((t) => (
                   <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
@@ -325,7 +530,7 @@ export default function AdminTeams() {
             <Button variant="outline" onClick={() => setMoveState(null)}>Cancel</Button>
             <Button onClick={handleMove} disabled={saving || !targetTeamId}>
               {saving && <Spinner size="sm" className="mr-2 text-primary-foreground" />}
-              {saving ? "Moving…" : "Move Player"}
+              {saving ? "Movingâ€¦" : "Move Player"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -334,8 +539,7 @@ export default function AdminTeams() {
   );
 }
 
-// inline X icon for remove-from-team button
-function X({ className }: { className?: string }) {
+function XIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTournament } from "@/context/TournamentContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,13 +18,14 @@ import {
 } from "@/services/firebase-service";
 import type { Match, InningsScore, MatchResult } from "@/types";
 import {
-  Calendar, PlayCircle, CheckCircle2, Trophy, Plus, Trash2, Edit3, RotateCcw, Filter,
+  Calendar, PlayCircle, CheckCircle2, Trophy, Plus, Trash2, Edit3, RotateCcw, Filter, Zap,
 } from "lucide-react";
 
 type TabType = "all" | "upcoming" | "live" | "completed";
 
 export default function AdminMatches() {
   const { matches, teams, activeChampionship, loading } = useTournament();
+  const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [generating, setGenerating] = useState(false);
@@ -271,10 +273,16 @@ export default function AdminMatches() {
                         </Button>
                       )}
                       {match.status === "live" && (
-                        <Button size="sm" onClick={() => openScoreEntry(match)} title="Enter result">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          <span className="hidden sm:inline">Result</span>
-                        </Button>
+                        <>
+                          <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white" onClick={() => navigate(`/admin/matches/${match.id}/live`)} title="Live scoring">
+                            <Zap className="h-3 w-3 mr-1" />
+                            <span className="hidden sm:inline">Live Score</span>
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => openScoreEntry(match)} title="Enter result">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            <span className="hidden sm:inline">Result</span>
+                          </Button>
+                        </>
                       )}
                       {match.status === "completed" && (
                         <>

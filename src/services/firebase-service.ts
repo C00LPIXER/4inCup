@@ -381,6 +381,16 @@ export async function updateMatch(
   await updateDoc(doc(db, col("matches"), id), data);
 }
 
+export function subscribeMatch(
+  matchId: string,
+  cb: (match: Match | null) => void
+): Unsubscribe {
+  return onSnapshot(doc(db, col("matches"), matchId), (snap) => {
+    if (!snap.exists()) return cb(null);
+    cb({ id: snap.id, ...snap.data() } as Match);
+  });
+}
+
 export async function updateMatchScore(
   matchId: string,
   team1Score: InningsScore,

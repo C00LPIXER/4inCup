@@ -19,6 +19,7 @@ import AdminTeams from "@/pages/admin/AdminTeams";
 import AdminMatches from "@/pages/admin/AdminMatches";
 import AdminStandings from "@/pages/admin/AdminStandings";
 import AdminUsers from "@/pages/admin/AdminUsers";
+import AdminLiveScore from "@/pages/admin/AdminLiveScore";
 
 export default function App() {
   return (
@@ -46,6 +47,7 @@ export default function App() {
             <Route path="players" element={<AdminPlayers />} />
             <Route path="teams" element={<AdminTeams />} />
             <Route path="matches" element={<AdminMatches />} />
+            <Route path="matches/:matchId/live" element={<AdminLiveScore />} />
             <Route path="standings" element={<AdminStandings />} />
             <Route path="users" element={<AdminUsers />} />
           </Route>

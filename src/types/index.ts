@@ -53,6 +53,45 @@ export interface MatchResult {
   summary: string; // e.g. "Team A won by 25 runs"
 }
 
+// ---------- Per-player live scoring ----------
+
+export type BatsmanStatus = "batting" | "notout" | "out";
+
+export interface BatsmanScore {
+  playerId: string;
+  runs: number;
+  balls: number;
+  fours: number;
+  sixes: number;
+  status: BatsmanStatus;
+  howOut: string;        // "bowled", "caught", "lbw", "run out", "stumped", "hit wicket", ""
+  bowlerPlayerId: string; // who took the wicket
+}
+
+export interface BowlerScore {
+  playerId: string;
+  overs: number;
+  balls: number;   // extra balls in current/last over (0-5)
+  runs: number;
+  wickets: number;
+  wides: number;
+  noBalls: number;
+}
+
+export interface LiveInnings {
+  battingTeamId: string;
+  bowlingTeamId: string;
+  batsmen: BatsmanScore[];
+  bowlers: BowlerScore[];
+  extras: { wides: number; noBalls: number; byes: number; legByes: number };
+  overs: number;
+  balls: number;
+  strikerPlayerId: string;
+  nonStrikerPlayerId: string;
+  currentBowlerPlayerId: string;
+  inningNumber: 1 | 2;
+}
+
 export interface Match {
   id: string;
   championshipId: string;
@@ -62,6 +101,8 @@ export interface Match {
   status: MatchStatus;
   team1Score: InningsScore | null;
   team2Score: InningsScore | null;
+  team1Innings?: LiveInnings | null;
+  team2Innings?: LiveInnings | null;
   result: MatchResult | null;
   date: string;
   venue: string;

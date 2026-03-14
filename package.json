@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "seed-admin": "node scripts/seed-admin.cjs"
+    "seed-admin": "node scripts/seed-admin.cjs",
+    "copy-to-test": "node scripts/copy-prod-to-test.cjs"
   },
   "repository": {
     "type": "git",
