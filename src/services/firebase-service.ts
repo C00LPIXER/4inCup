@@ -20,7 +20,6 @@ import type {
   Team,
   Match,
   Championship,
-  CricketSkills,
   CricketRole,
   InningsScore,
   MatchResult,
@@ -88,19 +87,10 @@ export async function registerPlayer(
     `4incup/${championshipId}`
   );
 
-  const emptySkills: CricketSkills = {
-    batting: 5,
-    bowling: 5,
-    fielding: 5,
-    keeping: 5,
-    experience: 5,
-  };
-
   const docRef = await addDoc(collection(db, col("players")), {
     name,
     photoURL,
     role: "",
-    skills: emptySkills,
     teamId: "",
     championshipId,
     createdAt: Date.now(),
@@ -149,10 +139,9 @@ export async function deletePlayer(id: string): Promise<void> {
 
 export async function assignRole(
   playerId: string,
-  role: CricketRole,
-  skills: CricketSkills
+  role: CricketRole
 ): Promise<void> {
-  await updateDoc(doc(db, col("players"), playerId), { role, skills });
+  await updateDoc(doc(db, col("players"), playerId), { role });
 }
 
 // ============================================================
@@ -211,7 +200,7 @@ export async function deleteTeam(id: string): Promise<void> {
 /** Shuffle players into balanced teams and persist */
 export async function shuffleTeams(
   championshipId: string,
-  teamCount: number,
+  teamCount: number = 5,
   teamNames: string[],
   teamColors: string[]
 ): Promise<void> {
@@ -244,18 +233,6 @@ export async function shuffleTeams(
     if (roleGroups[key]) roleGroups[key].push(p);
     else roleGroups["Unassigned"].push(p);
   });
-
-  // Sort each group by total skill descending (snake-draft style)
-  const totalSkill = (p: Player) =>
-    p.skills.batting +
-    p.skills.bowling +
-    p.skills.fielding +
-    p.skills.keeping +
-    p.skills.experience;
-
-  Object.values(roleGroups).forEach((group) =>
-    group.sort((a, b) => totalSkill(b) - totalSkill(a))
-  );
 
   // Create team buckets
   const teamBuckets: Player[][] = Array.from({ length: teamCount }, () => []);
@@ -564,18 +541,10 @@ export async function createManualPlayer(
   name: string,
   photoURL = ""
 ): Promise<string> {
-  const emptySkills: CricketSkills = {
-    batting: 5,
-    bowling: 5,
-    fielding: 5,
-    keeping: 5,
-    experience: 5,
-  };
   const docRef = await addDoc(collection(db, col("players")), {
     name: name.trim(),
     photoURL,
     role: "",
-    skills: emptySkills,
     teamId: "",
     championshipId,
     createdAt: Date.now(),

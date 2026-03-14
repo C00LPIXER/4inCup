@@ -67,7 +67,7 @@ export default function AdminTeams() {
     if (teams.length > 0 && !confirm("Re-shuffle all teams? Existing assignments will be lost.")) return;
     setShuffling(true);
     try {
-      await shuffleTeams(activeChampionship.id, activeChampionship.teamCount, TEAM_DEFAULT_NAMES, TEAM_COLORS);
+      await shuffleTeams(activeChampionship.id, TEAM_DEFAULT_NAMES.length, TEAM_DEFAULT_NAMES, TEAM_COLORS);
     } catch (err) { console.error(err); }
     finally { setShuffling(false); }
   };
@@ -311,9 +311,6 @@ export default function AdminTeams() {
         <div className="grid md:grid-cols-2 gap-6">
           {teams.map((team) => {
             const teamPlayers = players.filter((p) => p.teamId === team.id);
-            const avgSkill = teamPlayers.length
-              ? Math.round(teamPlayers.reduce((s, p) => s + (p.skills.batting + p.skills.bowling + p.skills.fielding + p.skills.experience) / 4, 0) / teamPlayers.length)
-              : 0;
             const isOver = dragOverZone === team.id;
             const isSameTeam = dragging?.fromTeamId === team.id;
 
@@ -339,7 +336,6 @@ export default function AdminTeams() {
                     <div className="h-4 w-4 rounded-full flex-shrink-0" style={{ backgroundColor: team.color }} />
                     <CardTitle className="text-lg">{team.name}</CardTitle>
                     <Badge variant="secondary" className="text-xs">{teamPlayers.length} players</Badge>
-                    {avgSkill > 0 && <Badge variant="outline" className="text-[10px]">Avg {avgSkill}/10</Badge>}
                     {isOver && !isSameTeam && draggedPlayer && (
                       <Badge className="text-xs animate-pulse" style={{ backgroundColor: `${team.color}30`, color: team.color, borderColor: `${team.color}50` }}>
                         + {draggedPlayer.name}

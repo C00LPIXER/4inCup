@@ -90,7 +90,7 @@ export default function AdminDashboard() {
         sport: "cricket",
         organizer: newOrganizer,
         status: "registration",
-        teamCount: 4,
+        teamCount: 5,
         maxPlayersPerTeam: 11,
         oversPerMatch: newOvers,
         registrationOpen: true,
@@ -491,23 +491,12 @@ function QuickAction({ href, icon, label, desc }: { href: string; icon: React.Re
 }
 
 function TeamRosterGroup({ team, players }: { team: Team; players: Player[] }) {
-  const avgSkill =
-    players.length > 0
-      ? Math.round(
-          players.reduce(
-            (s, p) => s + (p.skills.batting + p.skills.bowling + p.skills.fielding + p.skills.experience) / 4,
-            0
-          ) / players.length
-        )
-      : 0;
-
   return (
     <div>
       <div className="flex items-center gap-2 mb-2">
         <div className="h-3 w-3 rounded-full flex-shrink-0" style={{ backgroundColor: team.color }} />
         <h3 className="text-sm font-semibold">{team.name}</h3>
         <Badge variant="secondary" className="text-[10px]">{players.length} players</Badge>
-        {avgSkill > 0 && <Badge variant="outline" className="text-[10px] ml-auto">Avg {avgSkill}/10</Badge>}
       </div>
       <PlayerGrid players={players} teamColor={team.color} />
     </div>

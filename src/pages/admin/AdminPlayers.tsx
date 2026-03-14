@@ -11,18 +11,16 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
 import { PageLoader, Spinner } from "@/components/ui/spinner";
 import {
   updatePlayer, deletePlayer, assignRole, createManualPlayer,
 } from "@/services/firebase-service";
-import type { Player, CricketRole, CricketSkills } from "@/types";
+import type { Player, CricketRole } from "@/types";
 import {
   Users, Edit3, Trash2, UserCog, Search, Plus, Filter, UserCircle2, X,
 } from "lucide-react";
 
 const ROLES: CricketRole[] = ["Batsman", "Bowler", "All-Rounder", "Fielder"];
-const SKILL_LABELS: (keyof CricketSkills)[] = ["batting", "bowling", "fielding", "keeping", "experience"];
 
 export default function AdminPlayers() {
   const { players, teams, activeChampionship, loading } = useTournament();
@@ -36,10 +34,9 @@ export default function AdminPlayers() {
   const [editName, setEditName] = useState("");
   const [editPhotoURL, setEditPhotoURL] = useState("");
 
-  // Role/skills dialog
+  // Role dialog
   const [assignPlayer, setAssignPlayer] = useState<Player | null>(null);
   const [selectedRole, setSelectedRole] = useState<CricketRole>("Batsman");
-  const [skills, setSkills] = useState<CricketSkills>({ batting: 5, bowling: 5, fielding: 5, keeping: 5, experience: 5 });
 
   // Add player dialog
   const [showAdd, setShowAdd] = useState(false);
@@ -78,13 +75,12 @@ export default function AdminPlayers() {
   const openAssign = (player: Player) => {
     setAssignPlayer(player);
     setSelectedRole((player.role as CricketRole) || "Batsman");
-    setSkills(player.skills || { batting: 5, bowling: 5, fielding: 5, keeping: 5, experience: 5 });
   };
 
   const handleAssign = async () => {
     if (!assignPlayer) return;
     setSaving(true);
-    await assignRole(assignPlayer.id, selectedRole, skills);
+    await assignRole(assignPlayer.id, selectedRole);
     setAssignPlayer(null);
     setSaving(false);
   };
@@ -203,9 +199,7 @@ export default function AdminPlayers() {
                         ) : (
                           <Badge variant="outline" className="text-[10px]">No Team</Badge>
                         )}
-                        <span className="text-[10px] text-muted-foreground">
-                          BAT:{player.skills.batting} BOW:{player.skills.bowling} FLD:{player.skills.fielding} EXP:{player.skills.experience}
-                        </span>
+
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
@@ -284,7 +278,7 @@ export default function AdminPlayers() {
       <Dialog open={!!assignPlayer} onOpenChange={() => setAssignPlayer(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Assign Role & Skills</DialogTitle>
+            <DialogTitle>Assign Role</DialogTitle>
             <DialogDescription>{assignPlayer?.name}</DialogDescription>
           </DialogHeader>
           <div className="space-y-5">
@@ -295,19 +289,6 @@ export default function AdminPlayers() {
                 <SelectContent>{ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            {SKILL_LABELS.map((skill) => (
-              <div key={skill} className="space-y-2">
-                <div className="flex justify-between">
-                  <Label className="capitalize">{skill}</Label>
-                  <span className="text-sm font-bold text-primary">{skills[skill]}/10</span>
-                </div>
-                <Slider
-                  min={1} max={10} step={1}
-                  value={[skills[skill]]}
-                  onValueChange={([v]) => setSkills((s) => ({ ...s, [skill]: v }))}
-                />
-              </div>
-            ))}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAssignPlayer(null)}>Cancel</Button>

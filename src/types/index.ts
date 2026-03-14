@@ -5,16 +5,8 @@
 
 export type SportType = "cricket" | "football" | "badminton";
 
-// ---------- Cricket-specific roles & skills ----------
+// ---------- Cricket-specific roles ----------
 export type CricketRole = "Batsman" | "Bowler" | "All-Rounder" | "Fielder";
-
-export interface CricketSkills {
-  batting: number;   // 1-10
-  bowling: number;   // 1-10
-  fielding: number;  // 1-10
-  keeping: number;   // 1-10
-  experience: number;// 1-10
-}
 
 // ---------- Generic Player ----------
 export interface Player {
@@ -22,7 +14,6 @@ export interface Player {
   name: string;
   photoURL: string;
   role: CricketRole | "";
-  skills: CricketSkills;
   teamId: string;
   championshipId: string;
   createdAt: number;
@@ -64,14 +55,14 @@ export interface BatsmanScore {
   fours: number;
   sixes: number;
   status: BatsmanStatus;
-  howOut: string;        // "bowled", "caught", "lbw", "run out", "stumped", "hit wicket", ""
+  howOut: string; // "bowled", "caught", "lbw", "run out", "stumped", "hit wicket", ""
   bowlerPlayerId: string; // who took the wicket
 }
 
 export interface BowlerScore {
   playerId: string;
   overs: number;
-  balls: number;   // extra balls in current/last over (0-5)
+  balls: number; // extra balls in current/last over (0-5)
   runs: number;
   wickets: number;
   wides: number;
@@ -146,13 +137,15 @@ export const TEAM_COLORS = [
   "#3b82f6", // blue
   "#f59e0b", // amber
   "#8b5cf6", // purple
+  "#10b981", // emerald
 ];
 
 export const TEAM_DEFAULT_NAMES = [
-  "Thunder Hawks",
-  "Royal Strikers",
-  "Golden Eagles",
-  "Storm Riders",
+  "4in Warriors",
+  "4in Strikers",
+  "4in Blasters",
+  "4in Titans",
+  "4in Challengers",
 ];
 
 // ---------- Admin User ----------

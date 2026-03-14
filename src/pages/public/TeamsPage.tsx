@@ -85,10 +85,7 @@ export default function TeamsPage() {
                           </Badge>
                         )}
                       </div>
-                      <div className="text-right text-[10px] text-muted-foreground">
-                        <div>BAT {player.skills.batting}/10</div>
-                        <div>BOWL {player.skills.bowling}/10</div>
-                      </div>
+
                     </div>
                   ))}
                   {teamPlayers.length === 0 && (
