@@ -383,6 +383,88 @@ export async function updateMatchScore(
   });
 }
 
+// ============================================================
+// Scoring helpers (simplified: no extras concept)
+// ============================================================
+
+export type ApplyBallResult = {
+  innings: InningsScore;
+  inningsEnded: boolean;
+  message?: string;
+};
+
+/**
+ * Apply a single legal delivery (no extras concept) to the innings.
+ * - `runs` are credited to team and batsman.
+ * - Every call represents a legal delivery (no wides/no-balls in this simplified flow).
+ * - `isWicket` indicates a dismissal on this delivery.
+ */
+export function applyBallEvent(
+  innings: InningsScore | null,
+  runs: number,
+  isWicket: boolean,
+  wicketBatsmanId: string | null,
+  maxOvers: number,
+  teamPlayersCount: number
+): ApplyBallResult {
+  const i: InningsScore = innings
+    ? { ...innings }
+    : { runs: 0, wickets: 0, overs: 0, balls: 0 };
+
+  i.runs = (i.runs ?? 0) + (runs || 0);
+
+  // Legal delivery
+  i.balls = (i.balls ?? 0) + 1;
+  if (i.balls >= 6) {
+    i.overs = (i.overs ?? 0) + 1;
+    i.balls = 0;
+  }
+
+  // Wicket handling
+  if (isWicket) {
+    i.wickets = (i.wickets ?? 0) + 1;
+  }
+
+  // Determine innings end: overs complete OR all out
+  const oversCompleted = (i.overs ?? 0) >= maxOvers;
+  const allOut = (i.wickets ?? 0) >= Math.max(0, teamPlayersCount - 1);
+
+  const inningsEnded = oversCompleted || allOut;
+
+  let message: string | undefined;
+  if (allOut) message = "All out";
+  else if (oversCompleted) message = "Overs complete";
+
+  return { innings: i, inningsEnded, message };
+}
+
+/**
+ * Determine match winner from two completed innings.
+ */
+export function determineWinner(
+  team1Id: string,
+  team2Id: string,
+  team1Score: InningsScore | null,
+  team2Score: InningsScore | null
+): MatchResult | null {
+  if (!team1Score || !team2Score) return null;
+
+  const r1 = team1Score.runs ?? 0;
+  const r2 = team2Score.runs ?? 0;
+
+  if (r1 === r2) {
+    return { winnerId: "", summary: "Match tied" } as MatchResult;
+  }
+
+  if (r1 > r2) {
+    const runDiff = r1 - r2;
+    return { winnerId: team1Id, summary: `Won by ${runDiff} runs` } as MatchResult;
+  } else {
+    const runDiff = r2 - r1;
+    return { winnerId: team2Id, summary: `Won by ${runDiff} runs` } as MatchResult;
+  }
+}
+
 /** Generate round-robin fixtures for all teams */
 export async function generateFixtures(
   championshipId: string

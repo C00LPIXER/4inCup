@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTournament } from "@/context/TournamentContext";
-import { subscribeMatch, updateMatch } from "@/services/firebase-service";
+import { subscribeMatch, updateMatch, determineWinner } from "@/services/firebase-service";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +29,7 @@ import type {
   BatsmanScore,
   BowlerScore,
 } from "@/types";
+import { canBowlNextOver } from "@/services/match-utils";
 import {
   ArrowLeft,
   Zap,
@@ -57,7 +58,9 @@ function oversStr(overs: number, balls: number) {
 export default function AdminLiveScore() {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
-  const { teams, players } = useTournament();
+  const { teams, players, activeChampionship } = useTournament();
+  const maxOvers = activeChampionship?.oversPerMatch ?? 4;
+  const MAX_BOWLER_OVERS = 2;
 
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,6 +72,9 @@ export default function AdminLiveScore() {
   const [setupStriker, setSetupStriker] = useState("");
   const [setupNonStriker, setSetupNonStriker] = useState("");
   const [setupBowler, setSetupBowler] = useState("");
+  const [setupOvers, setSetupOvers] = useState(maxOvers);
+
+  const [activeMaxOvers, setActiveMaxOvers] = useState(maxOvers);
 
   // Wicket dialog
   const [showWicket, setShowWicket] = useState(false);
@@ -79,10 +85,6 @@ export default function AdminLiveScore() {
   // End innings / result
   const [showEndInnings, setShowEndInnings] = useState(false);
 
-  // Complete match
-  const [showCompleteMatch, setShowCompleteMatch] = useState(false);
-  const [winnerId, setWinnerId] = useState("");
-  const [resultSummary, setResultSummary] = useState("");
 
   // Change bowler dialog
   const [showChangeBowler, setShowChangeBowler] = useState(false);
@@ -157,6 +159,7 @@ export default function AdminLiveScore() {
   const handleStartInnings = async () => {
     if (!match || !setupBatting || !setupStriker || !setupNonStriker || !setupBowler) return;
     setSaving(true);
+    setActiveMaxOvers(setupOvers);
     const bowlingTeamId = setupBatting === match.team1Id ? match.team2Id : match.team1Id;
     const inningNumber: 1 | 2 = !match.team1Innings ? 1 : 2;
     const innings: LiveInnings = {
@@ -185,6 +188,15 @@ export default function AdminLiveScore() {
     isWicket = false
   ) => {
     if (!match || !currentInnings) return;
+    // Prevent scoring if innings already ended (all out or overs complete)
+    const battingTeamPlayersLocal = players.filter((p) => p.teamId === currentInnings.battingTeamId);
+    const activeBatsmenCountLocal = currentInnings.batsmen.filter((b) => b.status === "batting" || b.status === "notout").length;
+    const remainingUnbattedLocal = battingTeamPlayersLocal.filter((p) => !currentInnings.batsmen.find((bs) => bs.playerId === p.id)).length;
+    const inningsAllOutLocal = remainingUnbattedLocal === 0 && activeBatsmenCountLocal === 0;
+    if (inningsAllOutLocal || currentInnings.overs >= activeMaxOvers) {
+      setShowEndInnings(true);
+      return;
+    }
     setSaving(true);
     const inn = structuredClone(currentInnings) as LiveInnings;
 
@@ -226,11 +238,13 @@ export default function AdminLiveScore() {
 
     // Update innings balls/overs
     const totalRuns = battingRuns + (extras.wide ? 1 : 0) + (extras.noBall ? 1 : 0);
+    let overJustCompleted = false;
     if (isDelivery) {
       inn.balls++;
       if (inn.balls >= 6) {
         inn.overs++;
         inn.balls = 0;
+        overJustCompleted = true;
         // Swap ends at over
         const tmp = inn.strikerPlayerId;
         inn.strikerPlayerId = inn.nonStrikerPlayerId;
@@ -258,6 +272,32 @@ export default function AdminLiveScore() {
     const innFieldKey = inn.inningNumber === 1 ? "team1Innings" : "team2Innings";
     await updateMatch(match.id, { [innFieldKey]: inn, [innKey]: newScore });
     setSaving(false);
+
+    // If this is 2nd innings, check whether the chasing team reached the target
+    const targetReached = inn.inningNumber === 2 && match.team1Score && newScore.runs >= (match.team1Score.runs + 1);
+    if (targetReached) {
+      const result = determineWinner(match.team1Id, match.team2Id, match.team1Score, newScore);
+      await updateMatch(match.id, { [innFieldKey]: inn, [innKey]: newScore, status: "completed", result });
+      setShowEndInnings(true);
+      return;
+    }
+
+    // Recompute all-out after updating
+    const battingTeamPlayersAfter = players.filter((p) => p.teamId === inn.battingTeamId);
+    const activeBatsmenAfter = inn.batsmen.filter((b) => b.status === "batting" || b.status === "notout").length;
+    const remainingUnbattedAfter = battingTeamPlayersAfter.filter((p) => !inn.batsmen.find((bs) => bs.playerId === p.id)).length;
+    const isAllOutAfter = remainingUnbattedAfter === 0 && activeBatsmenAfter === 0;
+    if (isAllOutAfter) {
+      setShowEndInnings(true);
+      return;
+    }
+
+    if (inn.overs >= activeMaxOvers) {
+      setShowEndInnings(true);
+    } else if (overJustCompleted) {
+      setNewBowlerId("");
+      setShowChangeBowler(true);
+    }
   };
 
   // ── wicket ─────────────────────────────────────────────────────────────────
@@ -290,19 +330,24 @@ export default function AdminLiveScore() {
     }
 
     // Count as a legal ball for overs
+    let overJustCompleted = false;
     if (isDeliveryWicket(wicketType)) {
       inn.balls++;
       if (inn.balls >= 6) {
         inn.overs++;
         inn.balls = 0;
+        overJustCompleted = true;
         const tmp = inn.strikerPlayerId;
         inn.strikerPlayerId = inn.nonStrikerPlayerId;
         inn.nonStrikerPlayerId = tmp;
       }
     }
 
-    // New batsman
-    if (newBatsman) {
+    // New batsman or all out
+    const battingTeamPlayers = players.filter((p) => p.teamId === inn.battingTeamId);
+    const remainingUnbatted = battingTeamPlayers.filter((p) => !inn.batsmen.find((bs) => bs.playerId === p.id)).length;
+    const willReplace = newBatsman && newBatsman !== "none";
+    if (willReplace) {
       inn.batsmen.push(blankBatsman(newBatsman));
       // Replace out batsman as striker
       if (wicketBatsman === inn.strikerPlayerId) {
@@ -328,6 +373,22 @@ export default function AdminLiveScore() {
     setWicketType("bowled");
     setNewBatsman("");
     setSaving(false);
+
+    // If the user explicitly chose "none" or there are no remaining unbatted players
+    // and no active batsmen, treat as all out and end the innings.
+    const activeBatsmenCount = inn.batsmen.filter((b) => b.status === "batting" || b.status === "notout").length;
+    const isAllOut = (!willReplace && newBatsman === "none") || (remainingUnbatted === 0 && activeBatsmenCount === 0);
+    if (isAllOut) {
+      setShowEndInnings(true);
+      return;
+    }
+
+    if (inn.overs >= activeMaxOvers) {
+      setShowEndInnings(true);
+    } else if (overJustCompleted) {
+      setNewBowlerId("");
+      setShowChangeBowler(true);
+    }
   };
 
   function isDeliveryWicket(type: string) {
@@ -339,6 +400,14 @@ export default function AdminLiveScore() {
     if (!match || !currentInnings || !newBowlerId) return;
     setSaving(true);
     const inn = structuredClone(currentInnings) as LiveInnings;
+    // Validate selection: only one bowler may reach 2 overs
+    const validate = canBowlNextOver(newBowlerId, inn.bowlers, activeMaxOvers, inn.overs, 1);
+    if (!validate.ok) {
+      setSaving(false);
+      setNewBowlerId("");
+      alert(validate.reason);
+      return;
+    }
     if (!inn.bowlers.find((b) => b.playerId === newBowlerId)) {
       inn.bowlers.push(blankBowler(newBowlerId));
     }
@@ -361,27 +430,25 @@ export default function AdminLiveScore() {
       setSetupStriker("");
       setSetupNonStriker("");
       setSetupBowler("");
+      setShowEndInnings(false);
+      setSaving(false);
+      return;
     }
-    setShowEndInnings(false);
-    setSaving(false);
+
+    // If we're ending the 2nd innings, auto-compute the match result
+    if (currentInnings.inningNumber === 2) {
+      const team1Score = match.team1Score;
+      const team2Score = match.team2Score ?? { runs: 0, wickets: 0, overs: currentInnings.overs, balls: currentInnings.balls };
+      const result = determineWinner(match.team1Id, match.team2Id, team1Score, team2Score);
+      await updateMatch(match.id, { status: "completed", result, team2Score });
+      setShowEndInnings(false);
+      setSaving(false);
+      navigate("/admin/matches");
+      return;
+    }
   };
 
-  // ── complete match ─────────────────────────────────────────────────────────
-  const handleCompleteMatch = async () => {
-    if (!match) return;
-    setSaving(true);
-    const result = {
-      winnerId: winnerId === "tie" ? "" : winnerId,
-      summary: resultSummary || (() => {
-        const w = teamMap[winnerId];
-        return w ? `${w.name} won` : "Match completed";
-      })(),
-    };
-    await updateMatch(match.id, { status: "completed", result });
-    setShowCompleteMatch(false);
-    setSaving(false);
-    navigate("/admin/matches");
-  };
+  // (result auto-computed elsewhere)
 
   // ── swap striker ───────────────────────────────────────────────────────────
   const handleSwapStrike = async () => {
@@ -415,6 +482,11 @@ export default function AdminLiveScore() {
   const hasLiveInnings = !!currentInnings;
   const isSecondInnings = currentInnings?.inningNumber === 2;
   const oversBowled = currentInnings ? `${currentInnings.overs}.${currentInnings.balls}` : "0.0";
+  const allOversComplete = !!currentInnings && currentInnings.overs >= activeMaxOvers;
+
+  const activeBatsmenCountGlobal = currentInnings ? currentInnings.batsmen.filter((b) => b.status === "batting" || b.status === "notout").length : 0;
+  const remainingUnbattedGlobal = currentInnings ? battingPlayers.filter((p) => !currentInnings.batsmen.find((bs) => bs.playerId === p.id)).length : 0;
+  const inningsAllOut = !!currentInnings && remainingUnbattedGlobal === 0 && activeBatsmenCountGlobal === 0;
 
   const totalExtras = currentInnings
     ? Object.values(currentInnings.extras).reduce((a, b) => a + b, 0)
@@ -423,6 +495,8 @@ export default function AdminLiveScore() {
   const currentScore = currentInnings
     ? (currentInnings.inningNumber === 1 ? match.team1Score : match.team2Score)
     : null;
+
+  const inningsWon = !!(currentInnings && isSecondInnings && match.team1Score && currentScore && (currentScore.runs >= (match.team1Score.runs + 1)));
 
   return (
     <div className="space-y-5 max-w-4xl mx-auto">
@@ -443,16 +517,18 @@ export default function AdminLiveScore() {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          {hasLiveInnings && (
+          {hasLiveInnings && (allOversComplete || inningsAllOut || inningsWon) && (
             <>
               <Button variant="outline" size="sm" onClick={() => setShowEndInnings(true)}>
                 {isSecondInnings ? "End Match" : "End Innings"}
               </Button>
-              <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white"
-                onClick={() => setShowCompleteMatch(true)}>
-                <Trophy className="h-3 w-3 mr-1" /> Complete Match
-              </Button>
+              {/* result is auto-computed; no manual Complete Match button */}
             </>
+          )}
+          {hasLiveInnings && !allOversComplete && !inningsAllOut && !inningsWon && (
+            <Badge variant="outline" className="text-xs text-muted-foreground">
+              {activeMaxOvers - (currentInnings?.overs ?? 0)} overs remaining
+            </Badge>
           )}
           {!hasLiveInnings && (
             <Button onClick={() => { setSetupBatting(""); setShowSetup(true); }}>
@@ -540,6 +616,19 @@ export default function AdminLiveScore() {
                       </tr>
                     );
                   })}
+                  {battingPlayers
+                    .filter((p) => !currentInnings.batsmen.find((b) => b.playerId === p.id))
+                    .map((p) => (
+                      <tr key={p.id} className="border-b border-border/30 opacity-40">
+                        <td className="py-1.5 pr-3 text-muted-foreground">{p.name}</td>
+                        <td className="text-right px-2">—</td>
+                        <td className="text-right px-2">—</td>
+                        <td className="text-right px-2">—</td>
+                        <td className="text-right px-2">—</td>
+                        <td className="text-right px-2">—</td>
+                        <td className="text-left px-2 text-xs text-muted-foreground">yet to bat</td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -583,7 +672,7 @@ export default function AdminLiveScore() {
       )}
 
       {/* Ball Entry Controls */}
-      {currentInnings && (
+      {currentInnings && !inningsAllOut && !allOversComplete && !inningsWon && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
@@ -608,10 +697,10 @@ export default function AdminLiveScore() {
                 <span className="font-semibold">{playerMap[currentInnings.currentBowlerPlayerId]?.name || "—"}</span>
               </div>
               <div className="ml-auto flex items-center gap-1">
-                <Button variant="outline" size="sm" onClick={handleSwapStrike} disabled={saving}>
+                <Button variant="outline" size="sm" onClick={handleSwapStrike} disabled={saving || inningsAllOut || allOversComplete || inningsWon}>
                   <RefreshCw className="h-3 w-3 mr-1" /> Swap Strike
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => setShowChangeBowler(true)} disabled={saving}>
+                <Button variant="outline" size="sm" onClick={() => setShowChangeBowler(true)} disabled={saving || inningsAllOut || allOversComplete || inningsWon}>
                   <Swords className="h-3 w-3 mr-1" /> Change Bowler
                 </Button>
               </div>
@@ -627,7 +716,7 @@ export default function AdminLiveScore() {
                     variant={r === 4 ? "default" : r === 6 ? "default" : "outline"}
                     className={`w-12 h-12 text-lg font-heading font-bold ${r === 4 ? "bg-blue-600 hover:bg-blue-700" : r === 6 ? "bg-purple-600 hover:bg-purple-700" : ""}`}
                     onClick={() => addBall(r)}
-                    disabled={saving}
+                    disabled={saving || inningsAllOut || allOversComplete || inningsWon}
                   >
                     {r}
                   </Button>
@@ -639,22 +728,22 @@ export default function AdminLiveScore() {
             <div>
               <p className="text-xs text-muted-foreground mb-2">Extras</p>
               <div className="flex gap-2 flex-wrap">
-                <Button variant="outline" size="sm" onClick={() => addBall(0, { wide: true })} disabled={saving}>
+                <Button variant="outline" size="sm" onClick={() => addBall(0, { wide: true })} disabled={saving || inningsAllOut || allOversComplete || inningsWon}>
                   Wide
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => addBall(0, { noBall: true })} disabled={saving}>
+                <Button variant="outline" size="sm" onClick={() => addBall(0, { noBall: true })} disabled={saving || inningsAllOut || allOversComplete || inningsWon}>
                   No Ball
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => addBall(0, { bye: 1 })} disabled={saving}>
+                <Button variant="outline" size="sm" onClick={() => addBall(0, { bye: 1 })} disabled={saving || inningsAllOut || allOversComplete || inningsWon}>
                   1 Bye
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => addBall(0, { bye: 2 })} disabled={saving}>
+                <Button variant="outline" size="sm" onClick={() => addBall(0, { bye: 2 })} disabled={saving || inningsAllOut || allOversComplete || inningsWon}>
                   2 Byes
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => addBall(0, { legBye: 1 })} disabled={saving}>
+                <Button variant="outline" size="sm" onClick={() => addBall(0, { legBye: 1 })} disabled={saving || inningsAllOut || allOversComplete || inningsWon}>
                   1 Leg Bye
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => addBall(0, { legBye: 2 })} disabled={saving}>
+                <Button variant="outline" size="sm" onClick={() => addBall(0, { legBye: 2 })} disabled={saving || inningsAllOut || allOversComplete || inningsWon}>
                   2 Leg Byes
                 </Button>
               </div>
@@ -668,7 +757,7 @@ export default function AdminLiveScore() {
                   setWicketBatsman(currentInnings.strikerPlayerId);
                   setShowWicket(true);
                 }}
-                disabled={saving}
+                disabled={saving || inningsAllOut || allOversComplete || inningsWon}
               >
                 <AlertTriangle className="h-4 w-4 mr-1" /> Wicket
               </Button>
@@ -685,10 +774,33 @@ export default function AdminLiveScore() {
               {!match.team1Innings ? "Start 1st Innings" : "Start 2nd Innings"}
             </DialogTitle>
             <DialogDescription>
-              Select the batting team and opening players.
+              {!match.team1Innings
+                ? `Select total overs, batting team and opening players.`
+                : `Select batting team and opening players. (${activeMaxOvers} overs)`}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Overs selector — only for 1st innings */}
+            {!match.team1Innings && (
+              <div className="space-y-2">
+                <Label>Total Overs</Label>
+                <div className="flex gap-2 flex-wrap">
+                  {[2, 3, 4, 5, 6, 8, 10].map((o) => (
+                    <Button
+                      key={o}
+                      type="button"
+                      size="sm"
+                      variant={setupOvers === o ? "default" : "outline"}
+                      className="w-12"
+                      onClick={() => setSetupOvers(o)}
+                    >
+                      {o}
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">Each bowler may bowl max {MAX_BOWLER_OVERS} overs</p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Batting Team</Label>
               <Select value={setupBatting} onValueChange={(v) => { setSetupBatting(v); setSetupStriker(""); setSetupNonStriker(""); setSetupBowler(""); }}>
@@ -824,17 +936,30 @@ export default function AdminLiveScore() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Change Bowler</DialogTitle>
+            <DialogDescription>Max {MAX_BOWLER_OVERS} overs per bowler • Match: {maxOvers} overs</DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label>Select New Bowler</Label>
+            <Label>Select Bowler</Label>
             <Select value={newBowlerId} onValueChange={setNewBowlerId}>
               <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
               <SelectContent>
-                {bowlingPlayers
-                  .filter((p) => p.id !== currentInnings?.currentBowlerPlayerId)
-                  .map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
+                {bowlingPlayers.map((p) => {
+                  const rec = currentInnings?.bowlers.find((b) => b.playerId === p.id);
+                  const bowled = rec?.overs ?? 0;
+                  const remaining = MAX_BOWLER_OVERS - bowled;
+                  const atMax = bowled >= MAX_BOWLER_OVERS;
+                  const isCurrent = p.id === currentInnings?.currentBowlerPlayerId;
+                  const validate = canBowlNextOver(p.id, currentInnings?.bowlers, activeMaxOvers, currentInnings?.overs ?? 0, 1);
+                  const disabledBecauseRule = !validate.ok;
+                  const label = atMax
+                    ? `${p.name} — 0 ov left ⛔`
+                    : `${p.name} — ${remaining} ov left${isCurrent ? " ▶ current" : ""}${disabledBecauseRule ? ` — ${validate.reason}` : ""}`;
+                  return (
+                    <SelectItem key={p.id} value={p.id} disabled={atMax || isCurrent || disabledBecauseRule}>
+                      {label}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
@@ -855,8 +980,8 @@ export default function AdminLiveScore() {
             <DialogTitle>{isSecondInnings ? "End Match" : "End 1st Innings"}</DialogTitle>
             <DialogDescription>
               {isSecondInnings
-                ? "This will move to match result entry."
-                : "The 2nd innings will start. You'll be prompted to select the new batting lineup."}
+                ? `All ${activeMaxOvers} overs completed. Proceed to set the match result.`
+                : `All ${activeMaxOvers} overs completed. The 2nd innings will now start.`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -868,39 +993,7 @@ export default function AdminLiveScore() {
         </DialogContent>
       </Dialog>
 
-      {/* Complete Match Dialog */}
-      <Dialog open={showCompleteMatch} onOpenChange={setShowCompleteMatch}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Complete Match</DialogTitle>
-            <DialogDescription>Set the final result and mark the match as completed.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Winner</Label>
-              <Select value={winnerId} onValueChange={setWinnerId}>
-                <SelectTrigger><SelectValue placeholder="Select winner…" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={match.team1Id}>{t1?.name} Won</SelectItem>
-                  <SelectItem value={match.team2Id}>{t2?.name} Won</SelectItem>
-                  <SelectItem value="tie">Tie / No Result</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Result Summary <span className="text-muted-foreground text-xs">(optional)</span></Label>
-              <Input value={resultSummary} onChange={(e) => setResultSummary(e.target.value)} placeholder="e.g. Team A won by 25 runs" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCompleteMatch(false)}>Cancel</Button>
-            <Button onClick={handleCompleteMatch} disabled={saving || !winnerId}>
-              {saving ? <Spinner size="sm" className="mr-2 text-primary-foreground" /> : null}
-              <CheckCircle2 className="h-4 w-4 mr-1" /> Complete Match
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Match result is auto-computed; manual completion dialog removed */}
     </div>
   );
 }
