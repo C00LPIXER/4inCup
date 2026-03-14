@@ -8,7 +8,6 @@ import HomePage from "@/pages/public/HomePage";
 import TeamsPage from "@/pages/public/TeamsPage";
 import FixturesPage from "@/pages/public/FixturesPage";
 import StandingsPage from "@/pages/public/StandingsPage";
-import PlayersPage from "@/pages/public/PlayersPage";
 import RegisterPage from "@/pages/public/RegisterPage";
 
 // Admin pages
@@ -35,7 +34,6 @@ export default function App() {
             <Route path="/teams" element={<TeamsPage />} />
             <Route path="/fixtures" element={<FixturesPage />} />
             <Route path="/standings" element={<StandingsPage />} />
-            <Route path="/players" element={<PlayersPage />} />
           </Route>
 
           {/* Admin Login (standalone, no auth required) */}

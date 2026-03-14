@@ -92,6 +92,8 @@ export interface Match {
   status: MatchStatus;
   team1Score: InningsScore | null;
   team2Score: InningsScore | null;
+  topRunIds?: string[];
+  topWicketIds?: string[];
   team1Innings?: LiveInnings | null;
   team2Innings?: LiveInnings | null;
   result: MatchResult | null;

@@ -24,7 +24,6 @@ interface NavItem {
 
 const publicNav: NavItem[] = [
   { label: "Home", href: "/", icon: <Home className="h-4 w-4" /> },
-  { label: "Players", href: "/players", icon: <Users className="h-4 w-4" /> },
   { label: "Teams", href: "/teams", icon: <Shield className="h-4 w-4" /> },
   { label: "Fixtures", href: "/fixtures", icon: <Calendar className="h-4 w-4" /> },
   { label: "Standings", href: "/standings", icon: <BarChart3 className="h-4 w-4" /> },

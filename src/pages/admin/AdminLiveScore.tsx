@@ -90,6 +90,10 @@ export default function AdminLiveScore() {
   const [showChangeBowler, setShowChangeBowler] = useState(false);
   const [newBowlerId, setNewBowlerId] = useState("");
 
+  // Top performers selection (used when match not started)
+  const [topRunIds, setTopRunIds] = useState<string[]>(["", "", ""]);
+  const [topWicketIds, setTopWicketIds] = useState<string[]>(["", "", ""]);
+
   // Change striker (swap ends)
   // Subscribe to match
   useEffect(() => {
